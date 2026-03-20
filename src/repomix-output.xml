@@ -1,0 +1,4286 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+App.tsx
+components/common/Badge.tsx
+components/common/Button.tsx
+components/common/Card.tsx
+components/common/Checkbox.tsx
+components/common/Input.tsx
+components/common/Modal.tsx
+components/common/SearchBar.tsx
+components/common/Select.tsx
+components/common/Textarea.tsx
+components/dashboard/RequestCard.tsx
+components/dashboard/StatsCard.tsx
+components/layout/Footer.tsx
+components/layout/Header.tsx
+components/layout/Layout.tsx
+components/notifications/NotificationContainer.tsx
+components/profile/ProfileModal.tsx
+components/requests/DeleteConfirmModal.tsx
+components/requests/EditRequestModal.tsx
+components/requests/RequestDetailModal.tsx
+components/requests/RequestFilters.tsx
+components/requests/RequestForm.tsx
+components/requests/RequestList.tsx
+context/AppContext.tsx
+data/mockData.ts
+hooks/useMunicipality.ts
+hooks/useNotifications.ts
+hooks/useProviders.ts
+hooks/useRequests.ts
+hooks/useServices.ts
+index.css
+lib/supabase.ts
+main.tsx
+pages/CreateRequest.tsx
+pages/Dashboard.tsx
+pages/RequestHistory.tsx
+services/municipalityService.ts
+services/providerService.ts
+services/requestService.ts
+services/serviceService.ts
+types/database.ts
+types/index.ts
+utils/helpers.ts
+vite-env.d.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="App.tsx">
+import React from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { AppProvider } from "./context/AppContext";
+import { Layout } from "./components/layout/Layout";
+import { Dashboard } from "./pages/Dashboard";
+import { CreateRequest } from "./pages/CreateRequest";
+import { RequestHistory } from "./pages/RequestHistory";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
+function AppRoutes() {
+  return (
+    <>
+      <ScrollToTop />
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/create-request" element={<CreateRequest />} />
+          <Route path="/history" element={<RequestHistory />} />
+        </Routes>
+      </Layout>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppProvider>
+        <AppRoutes />
+      </AppProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+</file>
+
+<file path="components/common/Badge.tsx">
+import React from "react";
+import { CheckCircle, XCircle, Clock } from "lucide-react";
+import { RequestStatus } from "@/types";
+import { getStatusLabel, classNames } from "@/utils/helpers";
+
+interface BadgeProps {
+  status: RequestStatus;
+  size?: "sm" | "md" | "lg";
+  /** Opțional: adaugă un efect subtil de puls pentru statusul 'pending' */
+  animated?: boolean;
+}
+
+const statusConfig = {
+  accepted: {
+    wrapper: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
+    icon: CheckCircle,
+  },
+  rejected: {
+    wrapper: "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100",
+    icon: XCircle,
+  },
+  pending: {
+    wrapper: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
+    icon: Clock,
+  },
+};
+
+const sizeConfig = {
+  sm: {
+    wrapper: "px-2 py-0.5 text-xs gap-1",
+    icon: "w-3.5 h-3.5",
+  },
+  md: {
+    wrapper: "px-2.5 py-1 text-sm gap-1.5",
+    icon: "w-4 h-4",
+  },
+  lg: {
+    wrapper: "px-3 py-1.5 text-base gap-2",
+    icon: "w-5 h-5",
+  },
+};
+
+export function Badge({ status, size = "md", animated = false }: BadgeProps) {
+  const config = statusConfig[status];
+  const sizing = sizeConfig[size];
+  const Icon = config.icon;
+
+  return (
+    <span
+      className={classNames(
+        // Clase de bază
+        "inline-flex items-center justify-center font-medium border shadow-sm",
+        // Estetică modernă (pill shape & tranziții)
+        "rounded-full transition-colors duration-200 ease-in-out",
+        // Clase dinamice extrase din dicționare
+        config.wrapper,
+        sizing.wrapper
+      )}
+    >
+      <Icon 
+        className={classNames(
+          sizing.icon,
+          // Adaugă o animație subtilă dacă prop-ul este activ și statusul e pending
+          animated && status === "pending" ? "animate-pulse" : ""
+        )} 
+        strokeWidth={2.5} // Face iconițele puțin mai vizibile/groase
+      />
+      {getStatusLabel(status)}
+    </span>
+  );
+}
+</file>
+
+<file path="components/common/Button.tsx">
+import React, { ButtonHTMLAttributes } from "react";
+import { classNames } from "@/utils/helpers";
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
+  size?: "sm" | "md" | "lg";
+  isLoading?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+}
+
+export function Button({
+  children,
+  variant = "primary",
+  size = "md",
+  isLoading = false,
+  leftIcon,
+  rightIcon,
+  className,
+  disabled,
+  ...props
+}: ButtonProps) {
+  const baseStyles =
+    // Folosim flex și gap pentru a alinia perfect textul și iconițele, fără margini manuale
+    "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]";
+
+  const variants = {
+    primary:
+      "bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-600 hover:to-primary-600 focus-visible:ring-primary-500 shadow-sm hover:shadow",
+    secondary:
+      "bg-primary-50 text-primary-700 hover:bg-primary-100 focus-visible:ring-primary-300",
+    outline:
+      "border-2 border-primary-200 text-primary-700 hover:bg-primary-50 hover:border-primary-300 focus-visible:ring-primary-300",
+    ghost:
+      "text-primary-600 hover:bg-primary-50 focus-visible:ring-primary-300",
+    danger:
+      "bg-gradient-to-r from-rose-500 to-red-600 text-white hover:from-rose-500 hover:to-rose-600 focus-visible:ring-red-400 shadow-sm hover:shadow",
+  };
+
+  const sizes = {
+    sm: "px-3 py-1.5 text-sm gap-1.5",
+    md: "px-4 py-2 text-base gap-2",
+    lg: "px-6 py-3 text-lg gap-2.5",
+  };
+
+  return (
+    <button
+      className={classNames(baseStyles, variants[variant], sizes[size], className)}
+      disabled={disabled || isLoading}
+      {...props}
+    >
+      {isLoading && (
+        <svg
+          className="animate-spin h-4 w-4" // Am scos marginile hardcodate; Flex gap rezolvă asta.
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          />
+        </svg>
+      )}
+      
+      {/* Afișăm leftIcon DOAR dacă NU se încarcă */}
+      {!isLoading && leftIcon && <span>{leftIcon}</span>}
+      
+      {/* Învelim textul într-un span pentru consistență la animații (opțional, dar recomandat) */}
+      <span>{children}</span>
+      
+      {rightIcon && <span>{rightIcon}</span>}
+    </button>
+  );
+}
+</file>
+
+<file path="components/common/Card.tsx">
+import React, { ReactNode, KeyboardEvent } from "react";
+import { classNames } from "@/utils/helpers";
+
+interface CardProps {
+  children: ReactNode;
+  className?: string;
+  padding?: "none" | "sm" | "md" | "lg";
+  /** Activează efectul de hover vizual. Se activează automat dacă există un onClick */
+  hover?: boolean;
+  onClick?: () => void;
+}
+
+export function Card({
+  children,
+  className,
+  padding = "md",
+  hover = false,
+  onClick,
+}: CardProps) {
+  // Am mărit puțin padding-urile pentru a respira mai bine designul (standard modern)
+  const paddingSizes = {
+    none: "",
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-8",
+  };
+
+  const isInteractive = !!onClick;
+  const showHoverEffect = hover || isInteractive;
+
+  // Permitem activarea cardului și de pe tastatură (Enter sau Space)
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (isInteractive && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      // Dacă primește onClick, browserul trebuie să știe că acest div se comportă ca un buton
+      role={isInteractive ? "button" : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      className={classNames(
+        // Baza: Colțuri mai rotunjite (xl) și un border subtil
+        "bg-white rounded-xl border border-slate-200 shadow-sm bg-clip-border",
+        paddingSizes[padding],
+        
+        // Efectul de hover: o umbră mai fină și o ridicare subtilă (-translate-y-1)
+        showHoverEffect && "transition-all duration-300 ease-out hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5",
+        
+        // Interactivitate și Accesibilitate
+        isInteractive && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 active:scale-[0.98]",
+        
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+</file>
+
+<file path="components/common/Checkbox.tsx">
+import React, { InputHTMLAttributes, forwardRef, useId } from "react";
+import { Check } from "lucide-react";
+import { classNames } from "@/utils/helpers";
+
+interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "size"> {
+  label?: React.ReactNode;
+  /** Opțional: Un text secundar mai mic sub label, foarte util în formulare complexe */
+  description?: React.ReactNode;
+  size?: "sm" | "md" | "lg";
+}
+
+export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
+  ({ label, description, className, id, size = "md", disabled, ...props }, ref) => {
+    // Folosim useId pentru a genera ID-uri sigure și unice garantat de React
+    const reactId = useId();
+    const checkboxId = id || reactId;
+
+    // Mapăm mărimile pentru a păstra consistența cu componentele Button și Badge
+    const sizes = {
+      sm: { container: "w-4 h-4", icon: "w-3 h-3", text: "text-sm", gap: "ml-2.5" },
+      md: { container: "w-5 h-5", icon: "w-3.5 h-3.5", text: "text-base", gap: "ml-3" },
+      lg: { container: "w-6 h-6", icon: "w-4 h-4", text: "text-lg", gap: "ml-3.5" },
+    };
+
+    const currentSize = sizes[size];
+
+    return (
+      <div className={classNames("flex items-start", className)}>
+        {/* Containerul păstrează elementele ca "frați" pentru ca `peer` să funcționeze perfect */}
+        <div 
+          className={classNames(
+            "relative flex items-center justify-center shrink-0 mt-0.5", 
+            currentSize.container
+          )}
+        >
+          {/* Input-ul invizibil, dar care primește interacțiunile și focusul */}
+          <input
+            ref={ref}
+            type="checkbox"
+            id={checkboxId}
+            disabled={disabled}
+            className="peer absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed m-0"
+            {...props}
+          />
+          
+          {/* Fundalul / Border-ul Checkbox-ului */}
+          <div
+            className={classNames(
+              "absolute inset-0 rounded border-2 border-slate-300 bg-white transition-colors duration-200 pointer-events-none",
+              "peer-checked:bg-primary-500 peer-checked:border-primary-500",
+              "peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 peer-focus-visible:ring-offset-2",
+              disabled ? "opacity-50" : ""
+            )}
+          />
+          
+          {/* Iconița (apare cu un efect de zoom "scale" și fade-in) */}
+          <Check
+            strokeWidth={3}
+            className={classNames(
+              "absolute text-white pointer-events-none transition-all duration-200 ease-out",
+              "opacity-0 scale-50 peer-checked:opacity-100 peer-checked:scale-100",
+              currentSize.icon
+            )}
+          />
+        </div>
+        
+        {/* Zona de Text (Label + Description) */}
+        {(label || description) && (
+          <div className={classNames("flex flex-col", currentSize.gap)}>
+            {label && (
+              <label
+                htmlFor={checkboxId}
+                className={classNames(
+                  "font-medium text-slate-700 select-none",
+                  currentSize.text,
+                  disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                )}
+              >
+                {label}
+              </label>
+            )}
+            {description && (
+              <p 
+                className={classNames(
+                  "text-slate-500", 
+                  size === "sm" ? "text-xs" : "text-sm", 
+                  disabled && "opacity-50"
+                )}
+              >
+                {description}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+Checkbox.displayName = "Checkbox";
+</file>
+
+<file path="components/common/Input.tsx">
+import React, { InputHTMLAttributes, forwardRef, useId } from "react";
+import { classNames } from "@/utils/helpers";
+
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+}
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, helperText, leftIcon, rightIcon, className, id, disabled, ...props }, ref) => {
+    // Generăm ID-uri sigure pentru SSR și Accesibilitate
+    const reactId = useId();
+    const inputId = id || reactId;
+    const helperId = `${inputId}-helper`;
+    const errorId = `${inputId}-error`;
+
+    return (
+      <div className="w-full flex flex-col gap-1.5">
+        {label && (
+          <label
+            htmlFor={inputId}
+            className={classNames(
+              "text-sm font-medium text-primary-700",
+              disabled && "opacity-50"
+            )}
+          >
+            {label}
+          </label>
+        )}
+        
+        <div className="relative flex items-center">
+          {leftIcon && (
+            <div className="absolute left-3 flex items-center justify-center pointer-events-none text-primary-400">
+              {leftIcon}
+            </div>
+          )}
+          
+          <input
+            ref={ref}
+            id={inputId}
+            disabled={disabled}
+            // Accesibilitate vitală: spune asistentelor vocale că inputul are o eroare și unde să citească mesajul
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={classNames(
+              // Baza: Dimensiuni și tipografie corecte
+              "w-full rounded-lg border bg-white px-3 py-2.5 transition-all duration-200",
+              // text-base este critic pe mobile pentru a preveni auto-zoom-ul enervant pe iOS Safari
+              "text-base md:text-sm text-primary-900 placeholder:text-primary-400",
+              // Focus modern: outline fin + ring translucid
+              "focus:outline-none focus:ring-4",
+              // Starea de "Disabled"
+              "disabled:bg-primary-50 disabled:text-primary-500 disabled:cursor-not-allowed",
+              // Stări dinamice (Eroare vs Normal)
+              error
+                ? "border-status-rejected focus:border-status-rejected focus:ring-status-rejected/20"
+                : "border-primary-200 hover:border-primary-300 focus:border-baby-blue focus:ring-baby-blue/20",
+              // Padding dinamic pentru iconițe
+              leftIcon ? "pl-10" : "",
+              rightIcon ? "pr-10" : "",
+              className
+            )}
+            {...props}
+          />
+          
+          {rightIcon && (
+            <div className="absolute right-3 flex items-center justify-center text-primary-400">
+              {/* Nu punem pointer-events-none aici, poate vrei să dai click pe un icon de "Arată Parola" */}
+              {rightIcon}
+            </div>
+          )}
+        </div>
+
+        {/* Zona de mesaje */}
+        {error ? (
+          <p id={errorId} className="text-sm text-status-rejected font-medium">
+            {error}
+          </p>
+        ) : helperText ? (
+          <p id={helperId} className="text-sm text-primary-500">
+            {helperText}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+);
+
+Input.displayName = "Input";
+</file>
+
+<file path="components/common/Modal.tsx">
+import React, { ReactNode, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { classNames } from "@/utils/helpers";
+
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title?: string;
+  children: ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
+  /** Opțional: Împiedică închiderea când se dă click în afara modalului */
+  preventOutsideClick?: boolean;
+}
+
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = "md",
+  preventOutsideClick = false,
+}: ModalProps) {
+  // Referință către containerul interior al modalului pentru a gestiona focusul
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // 1. Gestiunea Overflow-ului (Scroll Lock)
+  useEffect(() => {
+    if (isOpen) {
+      // Calculăm lățimea scrollbar-ului pentru a preveni saltul paginii (layout shift)
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = "hidden";
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    } else {
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+    };
+  }, [isOpen]);
+
+  // 2. Gestiunea Escape Key și Focus Trap
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+      
+      // Focus Trap simplificat: Prevenim Tab-ul să iasă din modal (opțional, dar recomandat pt a11y)
+      // O implementare completă ar necesita o bibliotecă precum `focus-trap-react`
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      // Mutăm focusul pe modal la deschidere pentru Screen Readers
+      modalRef.current?.focus();
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  const sizes = {
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl", // xl ar trebui să fie vizibil mai mare decât lg
+  };
+
+  const modalContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={preventOutsideClick ? undefined : onClose}
+            aria-hidden="true"
+          />
+          
+          {/* Modal Container */}
+          <motion.div
+            ref={modalRef}
+            // Atribute vitale de accesibilitate
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? "modal-title" : undefined}
+            tabIndex={-1} // Permite mutarea focusului programatic
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }} // Animație mai naturală
+            className={classNames(
+              "relative w-full bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-200",
+              sizes[size]
+            )}
+          >
+            {/* Header (Sticky, nu se va mișca când dai scroll în conținut) */}
+            {title && (
+              <div className="flex-none flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white z-10">
+                <h2 id="modal-title" className="text-xl font-semibold text-slate-900">
+                  {title}
+                </h2>
+                <button
+                  onClick={onClose}
+                  aria-label="Închide fereastra"
+                  className="p-2 -mr-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            
+            {/* Body (Doar această zonă va avea scroll) */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {children}
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
+  // 3. React Portal: Randăm modalul direct în <body> pentru a evita problemele de z-index
+  if (typeof document === "undefined") return null; // Safety check pentru SSR
+  
+  return createPortal(modalContent, document.body);
+}
+</file>
+
+<file path="components/common/SearchBar.tsx">
+import React, { useState, useEffect, InputHTMLAttributes } from "react";
+import { Search, X } from "lucide-react";
+import { classNames } from "@/utils/helpers";
+
+interface SearchBarProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> {
+  value: string;
+  onChange: (value: string) => void;
+  debounceMs?: number;
+}
+
+export function SearchBar({
+  value,
+  onChange,
+  placeholder = "Caută după serviciu sau furnizor...",
+  debounceMs = 300,
+  className,
+  ...props
+}: SearchBarProps) {
+  const [localValue, setLocalValue] = useState(value);
+
+  // 1. Sincronizăm starea locală dacă valoarea din exterior se schimbă (ex: buton de "Reset Filters" în pagina părinte)
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  // 2. Metoda nativă și 100% sigură (Memory-Leak Free) pentru Debounce în React
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      // Trimitem către părinte doar dacă valoarea locală diferă de cea primită
+      if (localValue !== value) {
+        onChange(localValue);
+      }
+    }, debounceMs);
+
+    // Funcția de cleanup: dacă utilizatorul tastează din nou înainte de expirarea timpului, anulăm timer-ul vechi
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [localValue, debounceMs, onChange, value]);
+
+  const handleClear = () => {
+    setLocalValue("");
+    onChange(""); // Când dăm clear, vrem ca efectul să fie instant, nu așteptăm debounce-ul
+  };
+
+  return (
+    <div className={classNames("relative w-full", className)}>
+      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+        <Search className="w-5 h-5" />
+      </div>
+      
+      <input
+        type="text"
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        placeholder={placeholder}
+        // Accesibilitate pentru Screen Readers
+        aria-label={placeholder}
+        className={classNames(
+          // Baza: Dimensiuni consistente cu componenta Input
+          "w-full rounded-xl border bg-white py-2.5 pl-10 pr-10 transition-all duration-200",
+          // Tipografie: iOS Zoom Fix (text-base)
+          "text-base md:text-sm text-slate-900 placeholder:text-slate-400",
+          // Focus Ring modern (halou translucid)
+          "border-slate-200 hover:border-slate-300 focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20",
+          // Starea disabled
+          "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+        )}
+        {...props}
+      />
+      
+      {localValue && (
+        <button
+          type="button" // CRITIC: Previne trimiterea accidentală a formularului la apăsarea pe "X"
+          onClick={handleClear}
+          aria-label="Șterge căutarea"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:text-primary-600 rounded-r-xl"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="components/common/Select.tsx">
+import React, { SelectHTMLAttributes, forwardRef, useId } from "react";
+import { ChevronDown } from "lucide-react";
+import { classNames } from "@/utils/helpers";
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+  options: SelectOption[];
+  placeholder?: string;
+}
+
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ label, error, helperText, options, placeholder, className, id, disabled, ...props }, ref) => {
+    // Generăm ID-uri sigure pentru React (SSR & Accesibilitate)
+    const reactId = useId();
+    const selectId = id || reactId;
+    const helperId = `${selectId}-helper`;
+    const errorId = `${selectId}-error`;
+
+    return (
+      <div className="w-full flex flex-col gap-1.5">
+        {label && (
+          <label
+            htmlFor={selectId}
+            className={classNames(
+              "text-sm font-medium text-slate-700",
+              disabled && "opacity-50"
+            )}
+          >
+            {label}
+          </label>
+        )}
+        
+        <div className="relative flex items-center">
+          <select
+            ref={ref}
+            id={selectId}
+            disabled={disabled}
+            // Accesibilitate vitală
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={classNames(
+              // Baza: Dimensiuni consistente cu componenta Input, ascundem designul nativ
+              "w-full appearance-none rounded-lg border bg-white pl-3 pr-10 py-2.5 transition-all duration-200",
+              // text-base previne zoom-ul forțat pe iOS Safari când se deschide meniul
+              "text-base md:text-sm text-slate-900",
+              // Focus modern: outline fin + ring translucid
+              "focus:outline-none focus:ring-4",
+              // Starea de "Disabled"
+              "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-100",
+              // Stări dinamice (Eroare vs Normal)
+              error
+                ? "border-status-rejected focus:border-status-rejected focus:ring-status-rejected/20"
+                : "border-slate-200 hover:border-slate-300 focus:border-baby-blue focus:ring-baby-blue/20",
+              className
+            )}
+            // Dacă ai placeholder, asigură-te că valoarea implicită e un string gol
+            defaultValue={placeholder ? "" : undefined}
+            {...props}
+          >
+            {placeholder && (
+              <option value="" disabled className="text-slate-500">
+                {placeholder}
+              </option>
+            )}
+            {options.map((option) => (
+              <option key={option.value} value={option.value} className="text-slate-900">
+                {option.label}
+              </option>
+            ))} {/* <--- Aici e reparația, am închis paranteza de la map */}
+          </select>
+          
+          {/* Săgeata Custom */}
+          <div className="absolute right-3 flex items-center justify-center pointer-events-none text-slate-400">
+            <ChevronDown className={classNames("w-5 h-5", disabled && "opacity-50")} />
+          </div>
+        </div>
+
+        {/* Zona de mesaje */}
+        {error ? (
+          <p id={errorId} className="text-sm text-status-rejected font-medium">
+            {error}
+          </p>
+        ) : helperText ? (
+          <p id={helperId} className="text-sm text-slate-500">
+            {helperText}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+);
+
+Select.displayName = "Select";
+</file>
+
+<file path="components/common/Textarea.tsx">
+import React, { TextareaHTMLAttributes, forwardRef, useId } from "react";
+import { classNames } from "@/utils/helpers";
+
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+}
+
+export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ label, error, helperText, className, id, disabled, ...props }, ref) => {
+    // Generăm ID-uri sigure pentru React (SSR & Accesibilitate)
+    const reactId = useId();
+    const textareaId = id || reactId;
+    const helperId = `${textareaId}-helper`;
+    const errorId = `${textareaId}-error`;
+
+    return (
+      <div className="w-full flex flex-col gap-1.5">
+        {label && (
+          <label
+            htmlFor={textareaId}
+            className={classNames(
+              "text-sm font-medium text-slate-700",
+              disabled && "opacity-50"
+            )}
+          >
+            {label}
+          </label>
+        )}
+        
+        <textarea
+          ref={ref}
+          id={textareaId}
+          disabled={disabled}
+          // Accesibilitate vitală
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : helperText ? helperId : undefined}
+          className={classNames(
+            // Baza: Dimensiuni consistente cu Input, înălțime minimă și redimensionare doar pe verticală
+            "w-full rounded-lg border bg-white px-3 py-2.5 transition-all duration-200 resize-y min-h-[100px]",
+            // text-base previne zoom-ul forțat pe iOS Safari când utilizatorul dă click să scrie
+            "text-base md:text-sm text-slate-900 placeholder:text-slate-400",
+            // Focus modern: outline fin + ring translucid
+            "focus:outline-none focus:ring-4",
+            // Starea de "Disabled"
+            "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed",
+            // Stări dinamice (Eroare vs Normal)
+            error
+              ? "border-status-rejected focus:border-status-rejected focus:ring-status-rejected/20"
+              : "border-slate-200 hover:border-slate-300 focus:border-baby-blue focus:ring-baby-blue/20",
+            className
+          )}
+          {...props}
+        />
+        
+        {/* Zona de mesaje */}
+        {error ? (
+          <p id={errorId} className="text-sm text-status-rejected font-medium">
+            {error}
+          </p>
+        ) : helperText ? (
+          <p id={helperId} className="text-sm text-slate-500">
+            {helperText}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+);
+
+Textarea.displayName = "Textarea";
+</file>
+
+<file path="components/dashboard/RequestCard.tsx">
+import React from "react";
+import { motion } from "motion/react";
+import { 
+  Calendar, 
+  Building, 
+  Briefcase, 
+  ChevronRight, 
+  CheckCircle, 
+  XCircle, 
+  RotateCcw, 
+  Edit2, 
+  Trash2 
+} from "lucide-react";
+import { Request, RequestStatus } from "@/types";
+import { Badge } from "../common/Badge";
+import { formatDate, classNames } from "@/utils/helpers";
+
+interface RequestCardProps {
+  request: Request;
+  index?: number;
+  onClick?: () => void;
+  onStatusChange?: (id: string, status: RequestStatus) => void;
+  // Am adăugat noile props pentru Editare și Ștergere directă
+  onEdit?: (request: Request) => void;
+  onDelete?: (request: Request) => void;
+}
+
+export function RequestCard({ 
+  request, 
+  index = 0, 
+  onClick, 
+  onStatusChange,
+  onEdit,
+  onDelete
+}: RequestCardProps) {
+  
+  const statusBorderColors: Record<RequestStatus, string> = {
+    accepted: "border-l-emerald-400",
+    rejected: "border-l-rose-400",
+    pending: "border-l-amber-400",
+  };
+
+  const handleStatusClick = (e: React.MouseEvent, status: RequestStatus) => {
+    e.stopPropagation();
+    if (onStatusChange) onStatusChange(request.id, status);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onEdit) onEdit(request);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) onDelete(request);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.04 }}
+      onClick={onClick}
+      className={classNames(
+        "group relative bg-white hover:bg-slate-50 border-l-4 rounded-r-lg border-y border-r border-slate-200 shadow-sm hover:shadow transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
+        statusBorderColors[request.status]
+      )}
+      role={onClick ? "button" : "article"}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4">
+        
+        {/* Secțiunea de Titlu & Descriere */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-semibold text-slate-900 group-hover:text-primary-700 transition-colors truncate">
+            {request.title}
+          </h3>
+          <p className="text-sm text-slate-500 truncate mt-0.5">
+            {request.description}
+          </p>
+        </div>
+
+        {/* Secțiunea de Metadate */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 text-sm text-slate-600 sm:w-auto">
+          <div className="flex items-center gap-1.5 w-full sm:w-[140px] lg:w-[160px]">
+            <Building className="w-4 h-4 flex-shrink-0 text-slate-400" />
+            <span className="truncate">{request.providerName}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 w-full sm:w-[140px] lg:w-[160px]">
+            <Briefcase className="w-4 h-4 flex-shrink-0 text-slate-400" />
+            <span className="truncate">{request.serviceName}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 w-full sm:w-[120px] lg:w-[140px] text-slate-500">
+            <Calendar className="w-4 h-4 flex-shrink-0" />
+            <span>{formatDate(request.createdAt)}</span>
+          </div>
+        </div>
+
+        {/* Secțiunea de Status & Acțiuni Rapide */}
+        <div className="flex items-center justify-between sm:justify-end gap-3 mt-2 sm:mt-0 sm:min-w-[220px] shrink-0">
+          <Badge status={request.status} size="sm" />
+
+          <div className="flex items-center gap-1">
+            
+            {/* Butoane pentru Status */}
+            {onStatusChange && (
+              <div className="flex sm:hidden group-hover:flex items-center gap-1">
+                {request.status === "pending" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => handleStatusClick(e, "accepted")}
+                      className="p-1.5 rounded-md text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
+                      title="Acceptă cererea"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleStatusClick(e, "rejected")}
+                      className="p-1.5 rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
+                      title="Respinge cererea"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => handleStatusClick(e, "pending")}
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+                    title="Resetează la pending"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Divizor vizual între status și acțiunile CRUD (dacă ambele există) */}
+            {(onStatusChange && (onEdit || onDelete)) && (
+              <div className="hidden sm:block group-hover:block w-px h-4 bg-slate-200 mx-1" />
+            )}
+
+            {/* Butoane pentru Modificare & Ștergere (Quick Actions) */}
+            {(onEdit || onDelete) && (
+              <div className="flex sm:hidden group-hover:flex items-center gap-1 mr-1">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={handleEditClick}
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-sky-50 hover:text-sky-600 transition-colors focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:outline-none"
+                    title="Editează cererea"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteClick}
+                    className="p-1.5 rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
+                    title="Șterge cererea"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+            
+            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-transform ml-1" />
+          </div>
+        </div>
+
+      </div>
+    </motion.div>
+  );
+}
+</file>
+
+<file path="components/dashboard/StatsCard.tsx">
+import React from "react";
+import { motion } from "motion/react";
+import { LucideIcon } from "lucide-react";
+import { classNames } from "@/utils/helpers";
+
+interface StatsCardProps {
+  title: string;
+  // Am schimbat type-ul din `number` în `string | number`. 
+  // Astfel poți pasa valori formatate precum "1,200", "$50k" sau "15%"
+  value: string | number;
+  icon: LucideIcon;
+  color: "blue" | "green" | "red" | "yellow";
+  delay?: number;
+}
+
+const colorStyles = {
+  blue: {
+    bg: "bg-gradient-to-br from-sky-50 to-blue-50",
+    icon: "bg-gradient-to-br from-baby-blue to-baby-dark text-white shadow-blue-200",
+    value: "text-baby-dark",
+    border: "border-sky-100",
+  },
+  green: {
+    bg: "bg-gradient-to-br from-emerald-50 to-green-50",
+    icon: "bg-gradient-to-br from-emerald-400 to-green-500 text-white shadow-emerald-200",
+    value: "text-emerald-700",
+    border: "border-emerald-100",
+  },
+  red: {
+    bg: "bg-gradient-to-br from-rose-50 to-red-50",
+    icon: "bg-gradient-to-br from-rose-400 to-red-500 text-white shadow-rose-200",
+    value: "text-rose-700",
+    border: "border-rose-100",
+  },
+  yellow: {
+    bg: "bg-gradient-to-br from-amber-50 to-yellow-50",
+    icon: "bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-amber-200",
+    value: "text-amber-700",
+    border: "border-amber-100",
+  },
+};
+
+export function StatsCard({ title, value, icon: Icon, color, delay = 0 }: StatsCardProps) {
+  const styles = colorStyles[color];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      // Am scos `whileHover` de la Framer Motion pentru că animațiile de hover 
+      // sunt mult mai performante dacă sunt rulate nativ din CSS (clasele Tailwind)
+      transition={{ duration: 0.4, delay, ease: "easeOut" }}
+      className={classNames(
+        "relative p-6 rounded-2xl border shadow-sm transition-all duration-300 cursor-default overflow-hidden",
+        "hover:shadow-md hover:-translate-y-1",
+        styles.bg,
+        styles.border
+      )}
+    >
+      <div className="relative z-10 flex items-center justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          {/* Tipografie corectată: Titlul trebuie să fie mai mic (text-sm) pentru a lăsa valoarea să iasă în evidență */}
+          <p className="text-sm font-medium text-slate-500 mb-1 truncate">{title}</p>
+          {/* Am adăugat truncate ca să nu se spargă layout-ul dacă numărul e prea mare */}
+          <p className={classNames("text-3xl font-bold truncate", styles.value)}>
+            {value}
+          </p>
+        </div>
+        
+        <div
+          className={classNames(
+            "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm shrink-0",
+            styles.icon
+          )}
+        >
+          <Icon className="w-6 h-6" />
+        </div>
+      </div>
+
+      {/* Bonus Vizual: Un glow/flare subtil în colțul din dreapta-sus al cardului pentru un efect 3D */}
+      <div className="absolute -right-6 -top-6 w-24 h-24 bg-white opacity-40 rounded-full blur-2xl pointer-events-none" />
+    </motion.div>
+  );
+}
+</file>
+
+<file path="components/layout/Footer.tsx">
+import React, { useState, useEffect } from "react";
+import { Building2, ArrowUp } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+
+export function Footer() {
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <>
+      <footer
+        id="centria_footer"
+        className="mt-auto border-t border-sky-800 bg-gradient-to-br from-sky-900 via-sky-700 to-sky-600"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            
+            {/* Secțiunea Logo & Nume */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner">
+                <Building2 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="text-xl font-bold text-white tracking-wide block">
+                  Centria
+                </span>
+                <span className="text-sm text-sky-200">
+                  Administrație Publică
+                </span>
+              </div>
+            </div>
+
+            {/* Secțiunea Descriere */}
+            <p className="text-sm md:text-base text-sky-100 text-center md:text-right max-w-sm">
+              Platformă inteligentă de management al cererilor și resurselor administrative.
+            </p>
+          </div>
+        </div>
+
+        {/* Secțiunea de Copyright curată */}
+        <div className="border-t border-white/10 py-4 bg-black/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+            <p className="text-sm text-sky-200/70 text-center">
+              &copy; {currentYear} Centria. Toate drepturile rezervate.
+            </p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Butonul de Scroll to Top */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ duration: 0.2 }}
+            onClick={scrollToTop}
+            aria-label="Înapoi sus"
+            className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-50 p-3 rounded-full bg-white text-sky-700 shadow-xl border border-sky-100 hover:bg-sky-50 hover:-translate-y-1 transition-all focus:outline-none focus:ring-4 focus:ring-sky-500/30"
+          >
+            <ArrowUp className="w-6 h-6" strokeWidth={2.5} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+</file>
+
+<file path="components/layout/Header.tsx">
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Building2, User, Bell, Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useApp } from "@/context/AppContext";
+import { classNames } from "@/utils/helpers";
+
+export function Header() {
+  const location = useLocation();
+  const { toggleProfile, stats } = useApp();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu automatically if window resizes to desktop view
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const navLinks = [
+    { path: "/", label: "Dashboard" },
+    { path: "/create-request", label: "Cerere Nouă" },
+    { path: "/history", label: "Istoric" },
+  ];
+
+  return (
+    <header
+      id="centria_header"
+      className="sticky top-0 z-40 border-b border-sky-800 bg-gradient-to-br from-sky-900 via-sky-700 to-sky-600 shadow-sm"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          
+          {/* Left Side: Logo & Desktop Nav */}
+          <div className="flex items-center gap-8">
+            <Link 
+              to="/" 
+              className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg p-1 -ml-1"
+              aria-label="Acasă"
+            >
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner group-hover:bg-white/25 transition-colors">
+                <Building2 className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white tracking-wide">Centria</span>
+            </Link>
+
+            {/* Bug Fix: Moved the .map() inside the <nav> element properly */}
+            <nav className="hidden md:flex items-center gap-2">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.path;
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={classNames(
+                      "px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                      isActive
+                        ? "bg-white/20 text-white shadow-sm"
+                        : "text-sky-100 hover:bg-white/10 hover:text-white"
+                    )}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Right Side: Stats & Actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            
+            {/* Pending Stats Badge */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-sky-900/40 border border-white/10 rounded-lg shadow-inner">
+              <span className="text-sm text-sky-200">Pending:</span>
+              <span className="text-sm font-bold text-white">{stats.pending}</span>
+            </div>
+
+            {/* Notification Button */}
+            <button 
+              className="relative p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              aria-label="Notificări"
+            >
+              <Bell className="w-5 h-5" />
+              {stats.pending > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full border border-sky-800 shadow-sm" />
+              )}
+            </button>
+
+            {/* Profile Button */}
+            <button
+              onClick={toggleProfile}
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/5 text-white hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              aria-label="Deschide meniul de profil"
+            >
+              <User className="w-5 h-5" />
+              <span className="text-sm font-medium">Profil</span>
+            </button>
+
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              aria-label={mobileMenuOpen ? "Închide meniul" : "Deschide meniul"}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.nav
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="md:hidden overflow-hidden"
+              id="mobile-menu"
+            >
+              <div className="flex flex-col gap-1 pb-4 pt-2 border-t border-white/10 mt-2">
+                {navLinks.map((link) => {
+                  const isActive = location.pathname === link.path;
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={classNames(
+                        "px-4 py-3 rounded-lg text-base font-medium transition-colors",
+                        isActive
+                          ? "bg-white/20 text-white shadow-sm"
+                          : "text-sky-100 hover:bg-white/10 hover:text-white"
+                      )}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+                
+                {/* Mobile Profile Button (Since it's hidden on small screens in the top bar) */}
+                <button
+                  onClick={() => {
+                    toggleProfile();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 px-4 py-3 mt-2 rounded-lg text-base font-medium text-sky-100 hover:bg-white/10 hover:text-white transition-colors text-left"
+                >
+                  <User className="w-5 h-5" />
+                  Profilul Meu
+                </button>
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
+      </div>
+    </header>
+  );
+}
+</file>
+
+<file path="components/layout/Layout.tsx">
+import React, { ReactNode } from "react";
+import { motion } from "motion/react";
+import { Header } from "./Header";
+import { Footer } from "./Footer";
+import { ProfileModal } from "../profile/ProfileModal";
+import { NotificationContainer } from "../notifications/NotificationContainer";
+
+interface LayoutProps {
+  children: ReactNode;
+}
+
+export function Layout({ children }: LayoutProps) {
+  return (
+    <div 
+      id="centria_layout" 
+      // Am schimbat bg-primary-50 cu slate-50 pentru un aspect mai curat și neutru
+      // Am adăugat `selection:bg-sky-200` ca atunci când selectezi un text să arate profi, nu acel albastru standard din browser
+      className="min-h-screen flex flex-col bg-slate-50 relative selection:bg-sky-200 selection:text-sky-900"
+    >
+      {/* Element de design: Un "Glow" subtil în partea de sus a paginii (sub header) */}
+      <div 
+        className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-sky-100/40 to-transparent pointer-events-none" 
+        aria-hidden="true" 
+      />
+
+      {/* Overlays Globale (Modale și Notificări stau cel mai bine la nivelul de top) */}
+      <NotificationContainer />
+      <ProfileModal />
+      
+      <Header />
+      
+      {/* Am transformat <main> într-un <motion.main> pentru ca fiecare pagină să apară fluid la încărcare */}
+      <motion.main 
+        id="main-content" // ID crucial pentru accesibilitate (permite butoanelor de "Skip to content" să funcționeze)
+        className="flex-1 relative z-10 flex flex-col"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 flex-1">
+          {children}
+        </div>
+      </motion.main>
+      
+      {/* Am învelit Footer-ul pentru a ne asigura că stă mereu deasupra decorului de fundal */}
+      <div className="relative z-10 mt-auto">
+        <Footer />
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="components/notifications/NotificationContainer.tsx">
+import React from "react";
+import { motion, AnimatePresence } from "motion/react";
+// Am schimbat CheckCircle cu CheckCircle2 pentru un aspect puțin mai subțire și modern
+import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react"; 
+import { useApp } from "@/context/AppContext";
+import { Notification } from "@/types";
+import { classNames } from "@/utils/helpers";
+
+const iconMap = {
+  success: CheckCircle2,
+  error: XCircle,
+  warning: AlertCircle,
+  info: Info,
+};
+
+// Culori mai rafinate, cu borduri translucide pentru un efect subtil
+const styleMap = {
+  success: "bg-emerald-50 border-emerald-200/60 text-emerald-800",
+  error: "bg-rose-50 border-rose-200/60 text-rose-800",
+  warning: "bg-amber-50 border-amber-200/60 text-amber-800",
+  info: "bg-blue-50 border-blue-200/60 text-blue-800",
+};
+
+const iconColorMap = {
+  success: "text-emerald-500",
+  error: "text-rose-500",
+  warning: "text-amber-500",
+  info: "text-blue-500",
+};
+
+function NotificationItem({
+  notification,
+  onRemove,
+}: {
+  notification: Notification;
+  onRemove: (id: string) => void;
+}) {
+  const Icon = iconMap[notification.type];
+
+  return (
+    <motion.div
+      // Prop-ul MAGIC: Animație fluidă când o notificare este ștearsă iar celelalte se rearanjează
+      layout 
+      // Animație Apple-like: Apare de sus, cu un blur subtil
+      initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(4px)" }}
+      animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+      exit={{ opacity: 0, scale: 0.85, filter: "blur(2px)", transition: { duration: 0.2 } }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      
+      // Accesibilitate vitală
+      role="alert"
+      aria-live="assertive"
+      
+      className={classNames(
+        // Reactivăm pointer-events doar pentru notificare, nu pentru tot ecranul
+        "pointer-events-auto flex items-start gap-3 w-full p-4 rounded-2xl border shadow-xl shadow-slate-200/50 backdrop-blur-sm",
+        styleMap[notification.type]
+      )}
+    >
+      {/* Iconița sus (în caz că textul e lung și se întinde pe 2 rânduri) */}
+      <Icon className={classNames("w-5 h-5 flex-shrink-0 mt-0.5", iconColorMap[notification.type])} />
+      
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium leading-relaxed">
+          {notification.message}
+        </p>
+      </div>
+
+      <button
+        onClick={() => onRemove(notification.id)}
+        aria-label="Închide notificarea"
+        className="flex-shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-lg opacity-50 hover:opacity-100 hover:bg-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </motion.div>
+  );
+}
+
+export function NotificationContainer() {
+  const { notifications, removeNotification } = useApp();
+
+  return (
+    <div 
+      // pointer-events-none e CRITIC aici. Permite utilizatorului să dea click "prin" acest container
+      // z-[150] asigură că va sta peste orice modal posibil
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center gap-3 w-full max-w-sm px-4 pointer-events-none"
+    >
+      {/* mode="popLayout" previne salturile bruște în DOM când un element iese din scenă */}
+      <AnimatePresence mode="popLayout">
+        {notifications.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            onRemove={removeNotification}
+          />
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+</file>
+
+<file path="components/profile/ProfileModal.tsx">
+import React from "react";
+import { Building2, User, Mail, Phone, MapPin, Hash, ShieldCheck } from "lucide-react";
+import { motion } from "motion/react";
+import { Modal } from "../common/Modal";
+import { useApp } from "@/context/AppContext";
+
+export function ProfileModal() {
+  const { municipality, isProfileOpen, closeProfile } = useApp();
+
+  // Dacă nu există datele, prevenim erorile la randare
+  if (!municipality) return null;
+
+  const profileFields = [
+    { icon: Building2, label: "Denumire Instituție", value: municipality.name },
+    { icon: Hash, label: "Cod Unic (CUI)", value: municipality.cui },
+    { icon: User, label: "Persoană de contact", value: municipality.contactPerson.name },
+    { icon: Phone, label: "Telefon", value: municipality.contactPerson.phone },
+    { icon: Mail, label: "Email", value: municipality.contactPerson.email, fullWidth: true },
+    { icon: MapPin, label: "Adresă / Localitate", value: municipality.locality, fullWidth: true },
+  ];
+
+  return (
+    <Modal 
+      isOpen={isProfileOpen} 
+      onClose={closeProfile} 
+      // Am scos titlul standard din Modal, pentru că vom face un antet custom (mai spectaculos) mai jos
+      size="lg" 
+    >
+      <div className="flex flex-col">
+        {/* Antetul Profilului (Cover & Avatar) */}
+        <div className="relative pt-6 pb-6 px-6 bg-gradient-to-br from-sky-50 to-white border-b border-slate-100 rounded-t-2xl">
+          {/* Un element decorativ de fundal */}
+          <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+            <Building2 className="w-32 h-32" />
+          </div>
+
+          <div className="relative flex items-center gap-5">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 flex items-center justify-center shadow-lg shadow-sky-200">
+                <Building2 className="w-10 h-10 text-white" />
+              </div>
+              {/* Badge de "Cont Verificat" */}
+              <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-0.5 shadow-sm">
+                <ShieldCheck className="w-6 h-6 text-emerald-500" />
+              </div>
+            </div>
+            
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                {municipality.name}
+              </h3>
+              <p className="text-sm font-medium text-sky-600 flex items-center gap-1.5 mt-1">
+                <MapPin className="w-4 h-4" />
+                {municipality.locality}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Zona de Date (Grid Layout) */}
+        <div className="p-6 bg-white">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">
+            Informații Oficiale
+          </h4>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {profileFields.map((field, index) => {
+              const Icon = field.icon;
+              return (
+                <motion.div
+                  key={field.label}
+                  // Animație în cascadă (fiecare card apare cu o mică întârziere)
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 + 0.1 }}
+                  className={`flex items-start gap-3 p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-colors ${
+                    field.fullWidth ? "sm:col-span-2" : "col-span-1"
+                  }`}
+                >
+                  <div className="mt-0.5 w-8 h-8 rounded-lg bg-white border border-slate-100 shadow-sm flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-sky-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {/* Tipografie reparată: Label mic și discret, valoare vizibilă */}
+                    <p className="text-xs font-medium text-slate-500 mb-0.5">
+                      {field.label}
+                    </p>
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {field.value}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+</file>
+
+<file path="components/requests/DeleteConfirmModal.tsx">
+import React, { useState } from "react";
+import { AlertTriangle } from "lucide-react";
+import { Modal } from "../common/Modal";
+import { Button } from "../common/Button";
+import { Request } from "@/types";
+
+interface DeleteConfirmModalProps {
+  request: Request | null;
+  isOpen: boolean;
+  onClose: () => void;
+  // It's good practice to ensure onConfirm returns a Promise so the modal can await it
+  onConfirm: (id: string) => Promise<void>; 
+}
+
+export function DeleteConfirmModal({ request, isOpen, onClose, onConfirm }: DeleteConfirmModalProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!request) return;
+    setIsDeleting(true);
+    
+    try {
+      await onConfirm(request.id);
+      // Only close the modal if the deletion was successful
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete request:", error);
+      // In a real app, you would ideally trigger a toast notification here
+      // e.g., addNotification("Eroare la ștergere", "error");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // We return null early, but keep the Modal structure intact so Framer Motion 
+  // (inside the Modal component) can handle the exit animation properly if needed.
+  if (!request) return null;
+
+  return (
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      size="sm"
+      // We explicitly DO NOT pass a `title` prop here so the Modal doesn't render 
+      // its default header with the close (X) button. Alert dialogs usually look 
+      // better when the focus is entirely on the centered content and action buttons.
+    >
+      <div className="flex flex-col items-center text-center pt-4">
+        
+        {/* Warning Icon Container */}
+        <div className="w-14 h-14 rounded-full bg-red-100/80 flex items-center justify-center mb-5 ring-4 ring-red-50">
+          <AlertTriangle className="w-7 h-7 text-red-600" />
+        </div>
+        
+        {/* Title */}
+        <h3 className="text-xl font-bold text-slate-900 mb-2">
+          Ștergeți cererea?
+        </h3>
+        
+        {/* Description */}
+        <p className="text-sm text-slate-500 mb-8 max-w-[280px]">
+          Sunteți sigur că doriți să ștergeți cererea <span className="font-semibold text-slate-700">"{request.title}"</span>? Această acțiune este ireversibilă.
+        </p>
+
+        {/* Action Buttons (Using the custom Button component's built-in features) */}
+        <div className="flex gap-3 w-full">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+            disabled={isDeleting}
+          >
+            Anulează
+          </Button>
+          
+          <Button
+            type="button"
+            variant="danger"
+            className="flex-1"
+            onClick={handleDelete}
+            // Use the built-in isLoading prop we created earlier!
+            isLoading={isDeleting} 
+          >
+            {isDeleting ? "Se șterge..." : "Șterge"}
+          </Button>
+        </div>
+        
+      </div>
+    </Modal>
+  );
+}
+</file>
+
+<file path="components/requests/EditRequestModal.tsx">
+import React, { useState, useEffect } from "react";
+import { Calendar } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Modal } from "../common/Modal";
+import { Input } from "../common/Input";
+import { Select } from "../common/Select";
+import { Textarea } from "../common/Textarea";
+import { Checkbox } from "../common/Checkbox";
+import { Button } from "../common/Button";
+import { Request } from "@/types";
+import { useApp } from "@/context/AppContext";
+import { getCurrentDate } from "@/utils/helpers";
+
+interface EditRequestModalProps {
+  request: Request | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (id: string, updates: Partial<Request>) => Promise<void>;
+}
+
+interface FormData {
+  title: string;
+  description: string;
+  serviceId: string;
+  providerId: string;
+  hasEstimatedDate: boolean;
+  estimatedStartDate: string;
+}
+
+interface FormErrors {
+  title?: string;
+  description?: string;
+  serviceId?: string;
+  providerId?: string;
+  estimatedStartDate?: string;
+}
+
+export function EditRequestModal({ request, isOpen, onClose, onSave }: EditRequestModalProps) {
+  const { providers, services, notifySuccess, notifyError } = useApp();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    title: "",
+    description: "",
+    serviceId: "",
+    providerId: "",
+    hasEstimatedDate: false,
+    estimatedStartDate: "",
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  useEffect(() => {
+    if (request && isOpen) {
+      setFormData({
+        title: request.title,
+        description: request.description,
+        serviceId: request.serviceId,
+        providerId: request.providerId,
+        hasEstimatedDate: !!request.estimatedStartDate,
+        estimatedStartDate: request.estimatedStartDate || "",
+      });
+      setErrors({});
+    }
+  }, [request, isOpen]);
+
+  const serviceOptions = services.map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
+
+  const providerOptions = providers.map((p) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setFormData((prev) => ({
+      ...prev,
+      hasEstimatedDate: checked,
+      estimatedStartDate: checked ? prev.estimatedStartDate : "",
+    }));
+    
+    // Curățăm eroarea de pe dată dacă utilizatorul debifează căsuța
+    if (!checked && errors.estimatedStartDate) {
+      setErrors((prev) => ({ ...prev, estimatedStartDate: undefined }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.title.trim()) newErrors.title = "Titlul cererii este obligatoriu";
+    if (!formData.description.trim()) newErrors.description = "Descrierea cererii este obligatorie";
+    if (!formData.serviceId) newErrors.serviceId = "Selectați un serviciu";
+    if (!formData.providerId) newErrors.providerId = "Selectați un furnizor";
+    if (formData.hasEstimatedDate && !formData.estimatedStartDate) {
+      newErrors.estimatedStartDate = "Selectați data estimată de început";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm() || !request) {
+      notifyError("Vă rugăm să corectați erorile din formular.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const selectedService = services.find((s) => s.id === formData.serviceId);
+      const selectedProvider = providers.find((p) => p.id === formData.providerId);
+
+      await onSave(request.id, {
+        title: formData.title,
+        description: formData.description,
+        serviceId: formData.serviceId,
+        serviceName: selectedService?.name || "",
+        providerId: formData.providerId,
+        providerName: selectedProvider?.name || "",
+        providerCui: selectedProvider?.cui || "",
+        estimatedStartDate: formData.hasEstimatedDate ? formData.estimatedStartDate : undefined,
+      });
+
+      notifySuccess("Cererea a fost actualizată cu succes!");
+      onClose();
+    } catch {
+      notifyError("A apărut o eroare la actualizarea cererii.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!request) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Editare Cerere" size="lg" preventOutsideClick>
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        <Input
+          label="Titlu Cerere"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          placeholder="Ex: Colectare deșeuri Sector 3"
+          error={errors.title}
+          disabled={isSubmitting}
+        />
+
+        <Textarea
+          label="Descriere Cerere"
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          placeholder="Descrieți în detaliu serviciul solicitat..."
+          error={errors.description}
+          rows={4}
+          disabled={isSubmitting}
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <Select
+            label="Serviciu Solicitat"
+            name="serviceId"
+            value={formData.serviceId}
+            onChange={handleChange}
+            options={serviceOptions}
+            placeholder="Selectați serviciul"
+            error={errors.serviceId}
+            disabled={isSubmitting}
+          />
+
+          <Select
+            label="Furnizor"
+            name="providerId"
+            value={formData.providerId}
+            onChange={handleChange}
+            options={providerOptions}
+            placeholder="Selectați furnizorul"
+            error={errors.providerId}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        {/* Zona interactivă pentru dată, transformată într-un panou curat */}
+        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 transition-colors">
+          <Checkbox
+            checked={formData.hasEstimatedDate}
+            onChange={handleCheckboxChange}
+            disabled={isSubmitting}
+            label="Planificare Dată"
+            description="Specifică data la care ar trebui să înceapă prestarea serviciului (Opțional)."
+          />
+
+          {/* Animație fluidă pentru afișarea câmpului de dată */}
+          <AnimatePresence>
+            {formData.hasEstimatedDate && (
+              <motion.div
+                initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                animate={{ height: "auto", opacity: 1, marginTop: 16 }}
+                exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="pt-4 border-t border-slate-200">
+                  <Input
+                    type="date"
+                    name="estimatedStartDate"
+                    value={formData.estimatedStartDate}
+                    onChange={handleChange}
+                    min={getCurrentDate()}
+                    error={errors.estimatedStartDate}
+                    disabled={isSubmitting}
+                    leftIcon={<Calendar className="w-4 h-4" />}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer-ul cu acțiuni */}
+        <div className="flex items-center justify-end gap-3 pt-2 mt-2">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            Anulează
+          </Button>
+          <Button type="submit" variant="primary" isLoading={isSubmitting}>
+            Salvează Modificările
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+</file>
+
+<file path="components/requests/RequestDetailModal.tsx">
+import React from "react";
+import {
+  Calendar, Building, Briefcase, User, Mail, Phone,
+  MapPin, Hash, Clock, Edit, Trash2, CheckCircle,
+  XCircle, RotateCcw,
+} from "lucide-react";
+import { Modal } from "../common/Modal";
+import { Badge } from "../common/Badge";
+import { Button } from "../common/Button";
+import { Request, RequestStatus } from "@/types";
+import { formatDateTime, formatDate } from "@/utils/helpers";
+
+interface RequestDetailModalProps {
+  request: Request | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdateStatus?: (id: string, status: RequestStatus) => void;
+  onEdit?: (request: Request) => void;
+  onDelete?: (request: Request) => void;
+}
+
+export function RequestDetailModal({
+  request,
+  isOpen,
+  onClose,
+  onUpdateStatus,
+  onEdit,
+  onDelete,
+}: RequestDetailModalProps) {
+  if (!request) return null;
+
+  const detailFields = [
+    { icon: Building, label: "Furnizor", value: request.providerName },
+    { icon: Hash, label: "CUI Furnizor", value: request.providerCui },
+    { icon: Briefcase, label: "Serviciu", value: request.serviceName },
+    { icon: Calendar, label: "Data Creării", value: formatDateTime(request.createdAt) },
+    { icon: Clock, label: "Ultima Actualizare", value: formatDateTime(request.updatedAt) },
+    { icon: User, label: "Persoană Contact", value: request.contactPerson.name },
+    { icon: Mail, label: "Email Contact", value: request.contactPerson.email },
+    { icon: Phone, label: "Telefon Contact", value: request.contactPerson.phone },
+    { icon: MapPin, label: "Localitate", value: request.locality },
+  ];
+
+  if (request.estimatedStartDate) {
+    detailFields.push({
+      icon: Calendar,
+      label: "Data Estimată Început",
+      value: formatDate(request.estimatedStartDate),
+    });
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Detalii Cerere" size="lg">
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-semibold text-primary-900">{request.title}</h3>
+            <p className="text-lg text-primary-500 mt-1">{request.description}</p>
+          </div>
+          <Badge status={request.status} size="lg" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {detailFields.map((field, index) => {
+            const Icon = field.icon;
+            return (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-3 rounded-md bg-primary-50/70 border border-primary-100/50"
+              >
+                <div className="w-10 h-10 rounded-md bg-white flex items-center justify-center flex-shrink-0 shadow-sm border border-primary-100/50">
+                  <Icon className="w-5 h-5 text-primary-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg text-primary-400">{field.label}</p>
+                  <p className="text-lg font-medium text-primary-900 truncate">{field.value}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {onUpdateStatus && (
+          <div className="p-4 rounded-md bg-primary-50/50 border border-primary-100/50">
+            <p className="text-lg font-medium text-primary-700 mb-3">Schimbă Status</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  onUpdateStatus(request.id, "accepted");
+                  onClose();
+                }}
+                disabled={request.status === "accepted"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Acceptă
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateStatus(request.id, "rejected");
+                  onClose();
+                }}
+                disabled={request.status === "rejected"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <XCircle className="w-4 h-4" />
+                Respinge
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateStatus(request.id, "pending");
+                  onClose();
+                }}
+                disabled={request.status === "pending"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Pending
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3 pt-4 border-t border-primary-100">
+          {onEdit && (
+            <Button
+              variant="outline"
+              leftIcon={<Edit className="w-4 h-4" />}
+              onClick={() => {
+                onEdit(request);
+                onClose();
+              }}
+            >
+              Editează
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="outline"
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              onClick={() => {
+                onDelete(request);
+                onClose();
+              }}
+            >
+              Șterge
+            </Button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+</file>
+
+<file path="components/requests/RequestFilters.tsx">
+import React from "react";
+import { Filter, X } from "lucide-react";
+import { Select } from "../common/Select";
+import { Input } from "../common/Input";
+import { Button } from "../common/Button";
+import { FilterOptions, RequestStatus } from "@/types";
+import { providers, services } from "@/data/mockData";
+
+interface RequestFiltersProps {
+  filters: FilterOptions;
+  onFilterChange: <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => void;
+  onClearFilters: () => void;
+}
+
+export function RequestFilters({
+  filters,
+  onFilterChange,
+  onClearFilters,
+}: RequestFiltersProps) {
+  const statusOptions = [
+    { value: "all", label: "Toate Statusurile" },
+    { value: "accepted", label: "Acceptate" },
+    { value: "rejected", label: "Respinse" },
+    { value: "pending", label: "În Așteptare" },
+  ];
+
+  const providerOptions = [
+    { value: "", label: "Toți Furnizorii" },
+    ...providers.map((p) => ({ value: p.id, label: p.name })),
+  ];
+
+  const serviceOptions = [
+    { value: "", label: "Toate Serviciile" },
+    ...services.map((s) => ({ value: s.id, label: s.name })),
+  ];
+
+  const hasActiveFilters =
+    (filters.status && filters.status !== "all") ||
+    filters.providerId ||
+    filters.serviceId ||
+    filters.dateFrom ||
+    filters.dateTo;
+
+  return (
+    <div className="bg-white rounded-2xl border border-primary-100 p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <Filter className="w-5 h-5 text-baby-dark" />
+        <h3 className="text-lg font-semibold text-primary-900">Filtre</h3>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearFilters}
+            className="ml-auto"
+            leftIcon={<X className="w-4 h-4" />}
+          >
+            Resetează
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <Select
+          label="Status"
+          options={statusOptions}
+          value={filters.status || "all"}
+          onChange={(e) =>
+            onFilterChange("status", e.target.value as RequestStatus | "all")
+          }
+        />
+
+        <Select
+          label="Furnizor"
+          options={providerOptions}
+          value={filters.providerId || ""}
+          onChange={(e) => onFilterChange("providerId", e.target.value || undefined)}
+        />
+
+        <Select
+          label="Serviciu"
+          options={serviceOptions}
+          value={filters.serviceId || ""}
+          onChange={(e) => onFilterChange("serviceId", e.target.value || undefined)}
+        />
+
+        <Input
+          label="De la data"
+          type="date"
+          value={filters.dateFrom || ""}
+          onChange={(e) => onFilterChange("dateFrom", e.target.value || undefined)}
+        />
+
+        <Input
+          label="Până la data"
+          type="date"
+          value={filters.dateTo || ""}
+          onChange={(e) => onFilterChange("dateTo", e.target.value || undefined)}
+        />
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="components/requests/RequestForm.tsx">
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Send, Calendar, Building, Briefcase, Loader2 } from "lucide-react";
+import { motion } from "motion/react";
+import { Input } from "../common/Input";
+import { Select } from "../common/Select";
+import { Textarea } from "../common/Textarea";
+import { Checkbox } from "../common/Checkbox";
+import { Button } from "../common/Button";
+import { Card } from "../common/Card";
+import { useApp } from "@/context/AppContext";
+import { getCurrentDate } from "@/utils/helpers";
+
+interface FormData {
+  title: string;
+  description: string;
+  serviceId: string;
+  providerId: string;
+  hasEstimatedDate: boolean;
+  estimatedStartDate: string;
+}
+
+interface FormErrors {
+  title?: string;
+  description?: string;
+  serviceId?: string;
+  providerId?: string;
+  estimatedStartDate?: string;
+}
+
+export function RequestForm() {
+  const navigate = useNavigate();
+  const { 
+    municipality, 
+    addRequest, 
+    notifySuccess, 
+    notifyError,
+    providers,
+    services,
+    isLoadingProviders,
+    isLoadingServices
+  } = useApp();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState<FormData>({
+    title: "",
+    description: "",
+    serviceId: "",
+    providerId: "",
+    hasEstimatedDate: false,
+    estimatedStartDate: "",
+  });
+
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [providerCui, setProviderCui] = useState("");
+
+  useEffect(() => {
+    if (formData.providerId) {
+      const provider = providers.find((p) => p.id === formData.providerId);
+      setProviderCui(provider?.cui || "");
+    } else {
+      setProviderCui("");
+    }
+  }, [formData.providerId, providers]);
+
+  const serviceOptions = services.map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
+
+  const providerOptions = providers.map((p) => ({
+    value: p.id,
+    label: p.name,
+  }));
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (errors[name as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setFormData((prev) => ({
+      ...prev,
+      hasEstimatedDate: checked,
+      estimatedStartDate: checked ? prev.estimatedStartDate : "",
+    }));
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.title.trim()) {
+      newErrors.title = "Titlul cererii este obligatoriu";
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = "Descrierea cererii este obligatorie";
+    }
+
+    if (!formData.serviceId) {
+      newErrors.serviceId = "Selectați un serviciu";
+    }
+
+    if (!formData.providerId) {
+      newErrors.providerId = "Selectați un furnizor";
+    }
+
+    if (formData.hasEstimatedDate && !formData.estimatedStartDate) {
+      newErrors.estimatedStartDate = "Selectați data estimată de început";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      notifyError("Vă rugăm să completați toate câmpurile obligatorii");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const selectedService = services.find((s) => s.id === formData.serviceId);
+      const selectedProvider = providers.find((p) => p.id === formData.providerId);
+
+      await addRequest({
+        title: formData.title,
+        description: formData.description,
+        status: "pending",
+        municipalityId: municipality.id,
+        municipalityName: municipality.name,
+        municipalityCui: municipality.cui,
+        contactPerson: municipality.contactPerson,
+        locality: municipality.locality,
+        serviceId: formData.serviceId,
+        serviceName: selectedService?.name || "",
+        providerId: formData.providerId,
+        providerName: selectedProvider?.name || "",
+        providerCui: selectedProvider?.cui || "",
+        estimatedStartDate: formData.hasEstimatedDate
+          ? formData.estimatedStartDate
+          : undefined,
+      });
+
+      notifySuccess("Cererea a fost creată cu succes!");
+      navigate("/");
+    } catch {
+      notifyError("A apărut o eroare. Vă rugăm să încercați din nou.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isLoading = isLoadingProviders || isLoadingServices;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-baby-dark" />
+        <span className="ml-3 text-lg text-primary-600">Se încarcă datele...</span>
+      </div>
+    );
+  }
+
+  return (
+    <motion.form
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      onSubmit={handleSubmit}
+      noValidate
+      className="space-y-6"
+    >
+      <Card>
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-primary-100">
+          <div className="w-10 h-10 rounded-xl bg-baby-lighter flex items-center justify-center">
+            <Building className="w-5 h-5 text-baby-dark" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-primary-900">Date Primărie</h3>
+            <p className="text-lg text-primary-500">Completate automat</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Denumire Primărie"
+            value={municipality.name}
+            disabled
+          />
+          <Input
+            label="CUI Primărie"
+            value={municipality.cui}
+            disabled
+          />
+          <Input
+            label="Persoană de Contact"
+            value={municipality.contactPerson.name}
+            disabled
+          />
+          <Input
+            label="Email Contact"
+            value={municipality.contactPerson.email}
+            disabled
+          />
+          <Input
+            label="Telefon Contact"
+            value={municipality.contactPerson.phone}
+            disabled
+          />
+          <Input
+            label="Localitate"
+            value={municipality.locality}
+            disabled
+          />
+          <Input
+            label="Data Cererii"
+            value={getCurrentDate()}
+            disabled
+            leftIcon={<Calendar className="w-4 h-4" />}
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-primary-100">
+          <div className="w-10 h-10 rounded-xl bg-baby-lighter flex items-center justify-center">
+            <Briefcase className="w-5 h-5 text-baby-dark" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-primary-900">Detalii Cerere</h3>
+            <p className="text-lg text-primary-500">Completați informațiile despre cerere</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <Input
+            label="Titlu Cerere *"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+            placeholder="Ex: Colectare deșeuri Sector 3"
+            error={errors.title}
+          />
+
+          <Textarea
+            label="Descriere Cerere *"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="Descrieți în detaliu serviciul solicitat..."
+            error={errors.description}
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Select
+              label="Serviciu Solicitat *"
+              name="serviceId"
+              value={formData.serviceId}
+              onChange={handleChange}
+              options={serviceOptions}
+              placeholder="Selectați serviciul"
+              error={errors.serviceId}
+            />
+
+            <Select
+              label="Furnizor *"
+              name="providerId"
+              value={formData.providerId}
+              onChange={handleChange}
+              options={providerOptions}
+              placeholder="Selectați furnizorul"
+              error={errors.providerId}
+            />
+          </div>
+
+          {providerCui && (
+            <Input
+              label="CUI Furnizor"
+              value={providerCui}
+              disabled
+            />
+          )}
+
+          <div className="pt-4 border-t border-primary-100">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="hasEstimatedDate"
+                checked={formData.hasEstimatedDate}
+                onChange={handleCheckboxChange}
+              />
+              <label htmlFor="hasEstimatedDate" className="cursor-pointer">
+                <span className="text-lg font-medium text-primary-900">
+                  Adaugă dată estimată de început
+                </span>
+                <p className="text-lg text-primary-500 mt-0.5">
+                  Opțional - specificați când doriți să înceapă serviciul
+                </p>
+              </label>
+            </div>
+
+            {formData.hasEstimatedDate && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4"
+              >
+                <Input
+                  label="Data Estimată de Început *"
+                  type="date"
+                  name="estimatedStartDate"
+                  value={formData.estimatedStartDate}
+                  onChange={handleChange}
+                  min={getCurrentDate()}
+                  error={errors.estimatedStartDate}
+                  leftIcon={<Calendar className="w-4 h-4" />}
+                />
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <div className="flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => navigate("/")}
+        >
+          Anulează
+        </Button>
+        <Button
+          type="submit"
+          variant="primary"
+          isLoading={isSubmitting}
+          rightIcon={<Send className="w-4 h-4" />}
+        >
+          Trimite Cererea
+        </Button>
+      </div>
+    </motion.form>
+  );
+}
+</file>
+
+<file path="components/requests/RequestList.tsx">
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { FileText, Inbox } from "lucide-react";
+import { RequestCard } from "../dashboard/RequestCard";
+import { RequestDetailModal } from "./RequestDetailModal";
+import { EditRequestModal } from "./EditRequestModal";
+import { DeleteConfirmModal } from "./DeleteConfirmModal";
+import { Request, RequestStatus } from "@/types";
+import { useApp } from "@/context/AppContext";
+
+interface RequestListProps {
+  requests: Request[];
+  title?: string;
+  emptyMessage?: string;
+  onUpdateStatus?: (id: string, status: RequestStatus) => void;
+}
+
+export function RequestList({
+  requests,
+  title,
+  emptyMessage = "Nu există cereri",
+  onUpdateStatus,
+}: RequestListProps) {
+  const { updateRequest, deleteRequest, notifySuccess, notifyError } = useApp();
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const handleCardClick = (request: Request) => {
+    setSelectedRequest(request);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedRequest(null);
+  };
+
+  const handleEditClick = (request: Request) => {
+    setSelectedRequest(request);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteClick = (request: Request) => {
+    setSelectedRequest(request);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleSaveEdit = async (id: string, updates: Partial<Request>) => {
+    await updateRequest(id, updates);
+  };
+
+  const handleConfirmDelete = async (id: string) => {
+    try {
+      await deleteRequest(id);
+      notifySuccess("Cererea a fost ștearsă cu succes!");
+    } catch {
+      notifyError("A apărut o eroare la ștergerea cererii");
+      throw new Error("Delete failed");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {title && (
+        <div className="flex items-center gap-3">
+          <FileText className="w-5 h-5 text-primary-400" />
+          <h2 className="text-xl font-semibold text-primary-900">{title}</h2>
+          <span className="px-2.5 py-0.5 bg-primary-100 text-primary-600 text-lg font-medium rounded-md">
+            {requests.length}
+          </span>
+        </div>
+      )}
+
+      <div className="bg-white rounded-md border border-primary-100 overflow-hidden shadow-sm">
+        <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-3 bg-primary-50/70 border-b border-primary-100 text-lg font-medium text-primary-500">
+          <div className="col-span-3">Cerere</div>
+          <div className="col-span-2">Furnizor</div>
+          <div className="col-span-2">Serviciu</div>
+          <div className="col-span-2">Data</div>
+          <div className="col-span-2">Status</div>
+          <div className="col-span-1"></div>
+        </div>
+
+        <AnimatePresence>
+          {requests.length > 0 ? (
+            <div className="divide-y divide-primary-50">
+              {requests.map((request, index) => (
+                <RequestCard
+                  key={request.id}
+                  request={request}
+                  index={index}
+                  onClick={() => handleCardClick(request)}
+                  onStatusChange={onUpdateStatus}
+                />
+              ))}
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-20 text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mb-4">
+                <Inbox className="w-8 h-8 text-primary-300" />
+              </div>
+              <p className="text-lg text-primary-400">{emptyMessage}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <RequestDetailModal
+        request={selectedRequest}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+        onUpdateStatus={onUpdateStatus}
+        onEdit={handleEditClick}
+        onDelete={handleDeleteClick}
+      />
+
+      <EditRequestModal
+        request={selectedRequest}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedRequest(null);
+        }}
+        onSave={handleSaveEdit}
+      />
+
+      <DeleteConfirmModal
+        request={selectedRequest}
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedRequest(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
+    </div>
+  );
+}
+</file>
+
+<file path="context/AppContext.tsx">
+import { createContext, useContext, ReactNode } from "react";
+import { useRequests } from "@/hooks/useRequests";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useMunicipality } from "@/hooks/useMunicipality";
+import { useProviders } from "@/hooks/useProviders";
+import { useServices } from "@/hooks/useServices";
+import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service } from "@/types";
+
+interface AppContextType {
+  requests: Request[];
+  filteredRequests: Request[];
+  filters: FilterOptions;
+  stats: DashboardStats;
+  isLoadingRequests: boolean;
+  addRequest: (request: Omit<Request, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: string; updatedAt?: string }) => Promise<Request>;
+  updateRequest: (id: string, updates: Partial<Request>) => Promise<Request>;
+  deleteRequest: (id: string) => Promise<void>;
+  setFilter: <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => void;
+  clearFilters: () => void;
+  refreshRequests: () => Promise<void>;
+  notifications: Notification[];
+  notifySuccess: (message: string) => void;
+  notifyError: (message: string) => void;
+  notifyInfo: (message: string) => void;
+  notifyWarning: (message: string) => void;
+  removeNotification: (id: string) => void;
+  municipality: Municipality;
+  isProfileOpen: boolean;
+  openProfile: () => void;
+  closeProfile: () => void;
+  toggleProfile: () => void;
+  providers: Provider[];
+  services: Service[];
+  isLoadingProviders: boolean;
+  isLoadingServices: boolean;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function AppProvider({ children }: { children: ReactNode }) {
+  const requestsHook = useRequests();
+  const notificationsHook = useNotifications();
+  const municipalityHook = useMunicipality();
+  const providersHook = useProviders();
+  const servicesHook = useServices();
+
+  const value: AppContextType = {
+    requests: requestsHook.requests,
+    filteredRequests: requestsHook.filteredRequests,
+    filters: requestsHook.filters,
+    stats: requestsHook.stats,
+    isLoadingRequests: requestsHook.isLoading,
+    addRequest: requestsHook.addRequest,
+    updateRequest: requestsHook.updateRequest,
+    deleteRequest: requestsHook.deleteRequest,
+    setFilter: requestsHook.setFilter,
+    clearFilters: requestsHook.clearFilters,
+    refreshRequests: requestsHook.refreshRequests,
+    ...notificationsHook,
+    ...municipalityHook,
+    providers: providersHook.providers,
+    services: servicesHook.services,
+    isLoadingProviders: providersHook.isLoading,
+    isLoadingServices: servicesHook.isLoading,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+export function useApp(): AppContextType {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error("useApp must be used within an AppProvider");
+  }
+  return context;
+}
+</file>
+
+<file path="data/mockData.ts">
+import { Municipality, Provider, Service, Request } from "@/types";
+
+export const currentMunicipality: Municipality = {
+  id: "mun-001",
+  name: "Primăria Municipiului București",
+  cui: "RO4267117",
+  contactPerson: {
+    name: "Maria Ionescu",
+    email: "maria.ionescu@pmb.ro",
+    phone: "+40 21 305 55 00",
+  },
+  locality: "București, Sector 1",
+};
+
+export const providers: Provider[] = [
+  {
+    id: "prov-001",
+    name: "EcoService România SRL",
+    cui: "RO12345678",
+    services: ["serv-001", "serv-002"],
+  },
+  {
+    id: "prov-002",
+    name: "Urban Construct SA",
+    cui: "RO23456789",
+    services: ["serv-003", "serv-004"],
+  },
+  {
+    id: "prov-003",
+    name: "AquaClean Solutions SRL",
+    cui: "RO34567890",
+    services: ["serv-001", "serv-005"],
+  },
+  {
+    id: "prov-004",
+    name: "GreenParks Management SRL",
+    cui: "RO45678901",
+    services: ["serv-006", "serv-007"],
+  },
+  {
+    id: "prov-005",
+    name: "TechInfra Systems SA",
+    cui: "RO56789012",
+    services: ["serv-008", "serv-009"],
+  },
+];
+
+export const services: Service[] = [
+  {
+    id: "serv-001",
+    name: "Colectare deșeuri",
+    description: "Servicii de colectare și gestionare a deșeurilor menajere",
+  },
+  {
+    id: "serv-002",
+    name: "Reciclare materiale",
+    description: "Servicii de reciclare și sortare materiale reciclabile",
+  },
+  {
+    id: "serv-003",
+    name: "Reparații drumuri",
+    description: "Lucrări de întreținere și reparații infrastructură rutieră",
+  },
+  {
+    id: "serv-004",
+    name: "Construcții clădiri publice",
+    description: "Servicii de construcție și renovare clădiri publice",
+  },
+  {
+    id: "serv-005",
+    name: "Întreținere rețea apă",
+    description: "Mentenanță și reparații rețea de distribuție apă",
+  },
+  {
+    id: "serv-006",
+    name: "Amenajare spații verzi",
+    description: "Proiectare și întreținere parcuri și spații verzi",
+  },
+  {
+    id: "serv-007",
+    name: "Plantare arbori",
+    description: "Servicii de plantare și întreținere vegetație urbană",
+  },
+  {
+    id: "serv-008",
+    name: "Iluminat public",
+    description: "Instalare și mentenanță sistem iluminat public",
+  },
+  {
+    id: "serv-009",
+    name: "Infrastructură IT",
+    description: "Servicii de infrastructură și rețele IT pentru instituții",
+  },
+];
+
+export const initialRequests: Request[] = [
+  {
+    id: "req-001",
+    title: "Colectare deșeuri Sector 3",
+    description: "Servicii de colectare deșeuri pentru zona rezidențială din Sectorul 3, Cartier Titan.",
+    status: "accepted",
+    municipalityId: "mun-001",
+    municipalityName: "Primăria Municipiului București",
+    municipalityCui: "RO4267117",
+    contactPerson: {
+      name: "Maria Ionescu",
+      email: "maria.ionescu@pmb.ro",
+      phone: "+40 21 305 55 00",
+    },
+    locality: "București, Sector 3",
+    serviceId: "serv-001",
+    serviceName: "Colectare deșeuri",
+    providerId: "prov-001",
+    providerName: "EcoService România SRL",
+    providerCui: "RO12345678",
+    createdAt: "2024-01-15T10:30:00Z",
+    estimatedStartDate: "2024-02-01",
+    updatedAt: "2024-01-20T14:00:00Z",
+  },
+  {
+    id: "req-002",
+    title: "Reparații Bulevardul Unirii",
+    description: "Lucrări de reparații și asfaltare pe segmentul Bd. Unirii, între Piața Unirii și Piața Alba Iulia.",
+    status: "pending",
+    municipalityId: "mun-001",
+    municipalityName: "Primăria Municipiului București",
+    municipalityCui: "RO4267117",
+    contactPerson: {
+      name: "Maria Ionescu",
+      email: "maria.ionescu@pmb.ro",
+      phone: "+40 21 305 55 00",
+    },
+    locality: "București, Sector 4",
+    serviceId: "serv-003",
+    serviceName: "Reparații drumuri",
+    providerId: "prov-002",
+    providerName: "Urban Construct SA",
+    providerCui: "RO23456789",
+    createdAt: "2024-01-18T09:00:00Z",
+    updatedAt: "2024-01-18T09:00:00Z",
+  },
+  {
+    id: "req-003",
+    title: "Amenajare Parc Herăstrău Nord",
+    description: "Proiect de amenajare și modernizare a zonei nordice din Parcul Herăstrău.",
+    status: "rejected",
+    municipalityId: "mun-001",
+    municipalityName: "Primăria Municipiului București",
+    municipalityCui: "RO4267117",
+    contactPerson: {
+      name: "Maria Ionescu",
+      email: "maria.ionescu@pmb.ro",
+      phone: "+40 21 305 55 00",
+    },
+    locality: "București, Sector 1",
+    serviceId: "serv-006",
+    serviceName: "Amenajare spații verzi",
+    providerId: "prov-004",
+    providerName: "GreenParks Management SRL",
+    providerCui: "RO45678901",
+    createdAt: "2024-01-10T11:15:00Z",
+    updatedAt: "2024-01-22T16:30:00Z",
+  },
+  {
+    id: "req-004",
+    title: "Modernizare iluminat Calea Victoriei",
+    description: "Înlocuire corpuri de iluminat vechi cu sisteme LED eficiente energetic pe Calea Victoriei.",
+    status: "accepted",
+    municipalityId: "mun-001",
+    municipalityName: "Primăria Municipiului București",
+    municipalityCui: "RO4267117",
+    contactPerson: {
+      name: "Maria Ionescu",
+      email: "maria.ionescu@pmb.ro",
+      phone: "+40 21 305 55 00",
+    },
+    locality: "București, Sector 1",
+    serviceId: "serv-008",
+    serviceName: "Iluminat public",
+    providerId: "prov-005",
+    providerName: "TechInfra Systems SA",
+    providerCui: "RO56789012",
+    createdAt: "2024-01-05T08:45:00Z",
+    estimatedStartDate: "2024-03-01",
+    updatedAt: "2024-01-25T10:00:00Z",
+  },
+  {
+    id: "req-005",
+    title: "Întreținere rețea apă Sector 6",
+    description: "Verificare și reparații preventive ale rețelei de distribuție apă în Sectorul 6.",
+    status: "pending",
+    municipalityId: "mun-001",
+    municipalityName: "Primăria Municipiului București",
+    municipalityCui: "RO4267117",
+    contactPerson: {
+      name: "Maria Ionescu",
+      email: "maria.ionescu@pmb.ro",
+      phone: "+40 21 305 55 00",
+    },
+    locality: "București, Sector 6",
+    serviceId: "serv-005",
+    serviceName: "Întreținere rețea apă",
+    providerId: "prov-003",
+    providerName: "AquaClean Solutions SRL",
+    providerCui: "RO34567890",
+    createdAt: "2024-01-22T13:20:00Z",
+    updatedAt: "2024-01-22T13:20:00Z",
+  },
+  {
+    id: "req-006",
+    title: "Plantare arbori Bd. Magheru",
+    description: "Campanie de plantare arbori decorativi pe Bulevardul Magheru pentru îmbunătățirea calității aerului.",
+    status: "accepted",
+    municipalityId: "mun-001",
+    municipalityName: "Primăria Municipiului București",
+    municipalityCui: "RO4267117",
+    contactPerson: {
+      name: "Maria Ionescu",
+      email: "maria.ionescu@pmb.ro",
+      phone: "+40 21 305 55 00",
+    },
+    locality: "București, Sector 1",
+    serviceId: "serv-007",
+    serviceName: "Plantare arbori",
+    providerId: "prov-004",
+    providerName: "GreenParks Management SRL",
+    providerCui: "RO45678901",
+    createdAt: "2024-01-08T15:00:00Z",
+    estimatedStartDate: "2024-04-15",
+    updatedAt: "2024-01-28T09:30:00Z",
+  },
+];
+</file>
+
+<file path="hooks/useMunicipality.ts">
+import { useState, useEffect } from "react";
+import { Municipality } from "@/types";
+import { fetchMunicipality } from "@/services/municipalityService";
+
+const defaultMunicipality: Municipality = {
+  id: "",
+  name: "Se încarcă...",
+  cui: "",
+  contactPerson: {
+    name: "",
+    email: "",
+    phone: "",
+  },
+  locality: "",
+};
+
+export function useMunicipality() {
+  const [municipality, setMunicipality] = useState<Municipality>(defaultMunicipality);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadMunicipality() {
+      try {
+        const data = await fetchMunicipality();
+        if (data) {
+          setMunicipality(data);
+        }
+      } catch (err) {
+        console.error("Failed to load municipality:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadMunicipality();
+  }, []);
+
+  const openProfile = () => setIsProfileOpen(true);
+  const closeProfile = () => setIsProfileOpen(false);
+  const toggleProfile = () => setIsProfileOpen((prev) => !prev);
+
+  return {
+    municipality,
+    isLoading,
+    isProfileOpen,
+    openProfile,
+    closeProfile,
+    toggleProfile,
+  };
+}
+</file>
+
+<file path="hooks/useNotifications.ts">
+import { useState, useCallback } from "react";
+import { Notification } from "@/types";
+import { generateId } from "@/utils/helpers";
+
+const NOTIFICATION_DURATION = 5000;
+
+export function useNotifications() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const addNotification = useCallback(
+    (type: Notification["type"], message: string) => {
+      const newNotification: Notification = {
+        id: generateId("notif"),
+        type,
+        message,
+        timestamp: Date.now(),
+      };
+
+      setNotifications((prev) => [...prev, newNotification]);
+
+      setTimeout(() => {
+        removeNotification(newNotification.id);
+      }, NOTIFICATION_DURATION);
+    },
+    []
+  );
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const notifySuccess = useCallback(
+    (message: string) => addNotification("success", message),
+    [addNotification]
+  );
+
+  const notifyError = useCallback(
+    (message: string) => addNotification("error", message),
+    [addNotification]
+  );
+
+  const notifyInfo = useCallback(
+    (message: string) => addNotification("info", message),
+    [addNotification]
+  );
+
+  const notifyWarning = useCallback(
+    (message: string) => addNotification("warning", message),
+    [addNotification]
+  );
+
+  return {
+    notifications,
+    addNotification,
+    removeNotification,
+    notifySuccess,
+    notifyError,
+    notifyInfo,
+    notifyWarning,
+  };
+}
+</file>
+
+<file path="hooks/useProviders.ts">
+import { useState, useEffect } from "react";
+import { Provider } from "@/types";
+import { fetchProviders } from "@/services/providerService";
+
+export function useProviders() {
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadProviders() {
+      try {
+        setIsLoading(true);
+        const data = await fetchProviders();
+        setProviders(data);
+      } catch (err) {
+        console.error("Failed to load providers:", err);
+        setError("Nu s-au putut încărca furnizorii");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadProviders();
+  }, []);
+
+  return { providers, isLoading, error };
+}
+</file>
+
+<file path="hooks/useRequests.ts">
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { Request, FilterOptions, DashboardStats } from "@/types";
+import { 
+  fetchRequests, 
+  createRequest as createRequestApi, 
+  updateRequest as updateRequestApi, 
+  deleteRequest as deleteRequestApi 
+} from "@/services/requestService";
+
+export function useRequests() {
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterOptions>({
+    status: "all",
+    searchQuery: "",
+  });
+
+  const loadRequests = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await fetchRequests();
+      setRequests(data);
+    } catch (err) {
+      console.error("Failed to load requests:", err);
+      setError("Nu s-au putut încărca cererile");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+
+  const addRequest = useCallback(async (request: Omit<Request, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: string; updatedAt?: string }) => {
+    try {
+      const newRequest = await createRequestApi(request);
+      setRequests((prev) => [newRequest, ...prev]);
+      return newRequest;
+    } catch (err) {
+      console.error("Failed to create request:", err);
+      throw err;
+    }
+  }, []);
+
+  const updateRequest = useCallback(async (id: string, updates: Partial<Request>) => {
+    try {
+      const updatedRequest = await updateRequestApi(id, updates);
+      setRequests((prev) =>
+        prev.map((req) => (req.id === id ? updatedRequest : req))
+      );
+      return updatedRequest;
+    } catch (err) {
+      console.error("Failed to update request:", err);
+      throw err;
+    }
+  }, []);
+
+  const deleteRequest = useCallback(async (id: string) => {
+    try {
+      await deleteRequestApi(id);
+      setRequests((prev) => prev.filter((req) => req.id !== id));
+    } catch (err) {
+      console.error("Failed to delete request:", err);
+      throw err;
+    }
+  }, []);
+
+  const setFilter = useCallback(
+    <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      status: "all",
+      searchQuery: "",
+    });
+  }, []);
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter((request) => {
+      if (filters.status && filters.status !== "all") {
+        if (request.status !== filters.status) return false;
+      }
+
+      if (filters.providerId) {
+        if (request.providerId !== filters.providerId) return false;
+      }
+
+      if (filters.serviceId) {
+        if (request.serviceId !== filters.serviceId) return false;
+      }
+
+      if (filters.dateFrom) {
+        if (new Date(request.createdAt) < new Date(filters.dateFrom)) return false;
+      }
+
+      if (filters.dateTo) {
+        if (new Date(request.createdAt) > new Date(filters.dateTo)) return false;
+      }
+
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase();
+        const matchesTitle = request.title.toLowerCase().includes(query);
+        const matchesProvider = request.providerName.toLowerCase().includes(query);
+        const matchesService = request.serviceName.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesProvider && !matchesService) return false;
+      }
+
+      return true;
+    });
+  }, [requests, filters]);
+
+  const stats: DashboardStats = useMemo(() => {
+    return {
+      total: requests.length,
+      accepted: requests.filter((r) => r.status === "accepted").length,
+      rejected: requests.filter((r) => r.status === "rejected").length,
+      pending: requests.filter((r) => r.status === "pending").length,
+    };
+  }, [requests]);
+
+  return {
+    requests,
+    filteredRequests,
+    filters,
+    stats,
+    isLoading,
+    error,
+    addRequest,
+    updateRequest,
+    deleteRequest,
+    setFilter,
+    clearFilters,
+    refreshRequests: loadRequests,
+  };
+}
+</file>
+
+<file path="hooks/useServices.ts">
+import { useState, useEffect } from "react";
+import { Service } from "@/types";
+import { fetchServices } from "@/services/serviceService";
+
+export function useServices() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadServices() {
+      try {
+        setIsLoading(true);
+        const data = await fetchServices();
+        setServices(data);
+      } catch (err) {
+        console.error("Failed to load services:", err);
+        setError("Nu s-au putut încărca serviciile");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadServices();
+  }, []);
+
+  return { services, isLoading, error };
+}
+</file>
+
+<file path="index.css">
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e8f4fd 50%, #f0f9ff 100%);
+  color: #0c4a6e;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #89cff0;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5bb4d9;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+</file>
+
+<file path="lib/supabase.ts">
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    "Missing Supabase environment variables. Please check your .env file."
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+</file>
+
+<file path="main.tsx">
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+</file>
+
+<file path="pages/CreateRequest.tsx">
+import React from "react";
+import { motion } from "motion/react";
+import { ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
+import { RequestForm } from "@/components/requests/RequestForm";
+import { Button } from "@/components/common/Button";
+
+export function CreateRequest() {
+  return (
+    <div id="centria_create-request" className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex items-center gap-4"
+      >
+        <Link to="/">
+          <Button variant="ghost" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            Înapoi
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold text-primary-900">Cerere Nouă</h1>
+          <p className="text-lg text-primary-600 mt-1">
+            Completează formularul pentru a crea o cerere nouă
+          </p>
+        </div>
+      </motion.div>
+
+      <RequestForm />
+    </div>
+  );
+}
+</file>
+
+<file path="pages/Dashboard.tsx">
+import React from "react";
+import { Link } from "react-router-dom";
+import { motion } from "motion/react";
+import { Plus, FileStack, CheckCircle, XCircle, Clock, Loader2, LayoutDashboard } from "lucide-react";
+import { StatsCard } from "@/components/dashboard/StatsCard";
+import { RequestList } from "@/components/requests/RequestList";
+import { SearchBar } from "@/components/common/SearchBar";
+import { Button } from "@/components/common/Button";
+import { useApp } from "@/context/AppContext";
+
+export function Dashboard() {
+  const {
+    stats,
+    filteredRequests,
+    filters,
+    setFilter,
+    updateRequest,
+    notifySuccess,
+    notifyError,
+    isLoadingRequests,
+  } = useApp();
+
+  const handleStatusUpdate = async (id: string, status: "accepted" | "rejected" | "pending") => {
+    try {
+      await updateRequest(id, { status });
+      const messages: Record<string, string> = {
+        accepted: "Cererea a fost acceptată!",
+        rejected: "Cererea a fost respinsă!",
+        pending: "Cererea a fost resetată la pending!",
+      };
+      notifySuccess(messages[status]);
+    } catch {
+      notifyError("A apărut o eroare la actualizarea cererii");
+    }
+  };
+
+  return (
+    <div id="centria_dashboard" className="space-y-8">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-md bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center shadow-sm">
+            <LayoutDashboard className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-primary-900">Dashboard</h1>
+            <p className="text-lg text-primary-500 mt-0.5">
+              Gestionează cererile către furnizori
+            </p>
+          </div>
+        </div>
+        <Link to="/create-request">
+          <Button variant="primary" leftIcon={<Plus className="w-5 h-5" />}>
+            Cerere Nouă
+          </Button>
+        </Link>
+      </motion.div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatsCard title="Total Cereri" value={stats.total} icon={FileStack} color="blue" delay={0} />
+        <StatsCard title="Acceptate" value={stats.accepted} icon={CheckCircle} color="green" delay={0.1} />
+        <StatsCard title="Respinse" value={stats.rejected} icon={XCircle} color="red" delay={0.2} />
+        <StatsCard title="În Așteptare" value={stats.pending} icon={Clock} color="yellow" delay={0.3} />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4"
+      >
+        <SearchBar
+          value={filters.searchQuery || ""}
+          onChange={(value) => setFilter("searchQuery", value)}
+          placeholder="Caută după titlu, serviciu sau furnizor..."
+        />
+        <div className="flex gap-2">
+          <Link to="/history">
+            <Button variant="outline" leftIcon={<FileStack className="w-4 h-4" />}>
+              Vezi Istoric
+            </Button>
+          </Link>
+        </div>
+      </motion.div>
+
+      {isLoadingRequests ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="w-10 h-10 animate-spin text-primary-400 mb-4" />
+          <span className="text-lg text-primary-500">Se încarcă cererile...</span>
+        </div>
+      ) : (
+        <RequestList
+          requests={filteredRequests}
+          title="Cereri Recente"
+          emptyMessage="Nu există cereri. Creează prima ta cerere!"
+          onUpdateStatus={handleStatusUpdate}
+        />
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="pages/RequestHistory.tsx">
+import React from "react";
+import { motion } from "motion/react";
+import { ArrowLeft, History } from "lucide-react";
+import { Link } from "react-router-dom";
+import { RequestList } from "@/components/requests/RequestList";
+import { RequestFilters } from "@/components/requests/RequestFilters";
+import { SearchBar } from "@/components/common/SearchBar";
+import { Button } from "@/components/common/Button";
+import { useApp } from "@/context/AppContext";
+
+export function RequestHistory() {
+  const { filteredRequests, filters, setFilter, clearFilters, updateRequest, notifySuccess, notifyError } =
+    useApp();
+
+  const handleStatusUpdate = async (id: string, status: "accepted" | "rejected" | "pending") => {
+    try {
+      await updateRequest(id, { status });
+      const messages: Record<string, string> = {
+        accepted: "Cererea a fost acceptată!",
+        rejected: "Cererea a fost respinsă!",
+        pending: "Cererea a fost resetată la pending!",
+      };
+      notifySuccess(messages[status]);
+    } catch {
+      notifyError("A apărut o eroare la actualizarea cererii");
+    }
+  };
+
+  return (
+    <div id="centria_request-history" className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+      >
+        <div className="flex items-center gap-4">
+          <Link to="/">
+            <Button variant="ghost" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+              Înapoi
+            </Button>
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <History className="w-6 h-6 text-primary-500" />
+              <h1 className="text-3xl font-bold text-primary-900">Istoric Cereri</h1>
+            </div>
+            <p className="text-lg text-primary-500 mt-1">
+              Vizualizează și filtrează toate cererile anterioare
+            </p>
+          </div>
+        </div>
+
+        <SearchBar
+          value={filters.searchQuery || ""}
+          onChange={(value) => setFilter("searchQuery", value)}
+          placeholder="Caută cereri..."
+        />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+      >
+        <RequestFilters
+          filters={filters}
+          onFilterChange={setFilter}
+          onClearFilters={clearFilters}
+        />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
+        <RequestList
+          requests={filteredRequests}
+          emptyMessage="Nu s-au găsit cereri cu filtrele selectate"
+          onUpdateStatus={handleStatusUpdate}
+        />
+      </motion.div>
+    </div>
+  );
+}
+</file>
+
+<file path="services/municipalityService.ts">
+import { supabase } from "@/lib/supabase";
+import { DbMunicipality } from "@/types/database";
+import { Municipality } from "@/types";
+
+function mapDbMunicipalityToMunicipality(db: DbMunicipality): Municipality {
+  return {
+    id: db.id,
+    name: db.name,
+    cui: db.cui,
+    contactPerson: {
+      name: db.contact_person,
+      email: db.email,
+      phone: db.phone,
+    },
+    locality: db.locality,
+  };
+}
+
+export async function fetchMunicipality(): Promise<Municipality | null> {
+  const { data, error } = await supabase
+    .from("municipalities")
+    .select("*")
+    .limit(1)
+    .single();
+
+  if (error) {
+    console.error("Error fetching municipality:", error);
+    return null;
+  }
+
+  return data ? mapDbMunicipalityToMunicipality(data) : null;
+}
+</file>
+
+<file path="services/providerService.ts">
+import { supabase } from "@/lib/supabase";
+import { DbProvider } from "@/types/database";
+import { Provider } from "@/types";
+
+function mapDbProviderToProvider(db: DbProvider): Provider {
+  return {
+    id: db.id,
+    name: db.name,
+    cui: db.cui,
+    services: [],
+  };
+}
+
+export async function fetchProviders(): Promise<Provider[]> {
+  const { data, error } = await supabase
+    .from("providers")
+    .select("*")
+    .order("name");
+
+  if (error) {
+    console.error("Error fetching providers:", error);
+    throw error;
+  }
+
+  return (data || []).map(mapDbProviderToProvider);
+}
+</file>
+
+<file path="services/requestService.ts">
+import { supabase } from "@/lib/supabase";
+import { DbRequest } from "@/types/database";
+import { Request, RequestStatus } from "@/types";
+
+function mapDbRequestToRequest(dbRequest: DbRequest): Request {
+  return {
+    id: dbRequest.id,
+    title: dbRequest.title,
+    description: dbRequest.description || "",
+    status: dbRequest.status as RequestStatus,
+    municipalityId: dbRequest.municipality_id || "",
+    municipalityName: dbRequest.municipality_name,
+    municipalityCui: dbRequest.municipality_cui,
+    contactPerson: {
+      name: dbRequest.contact_person,
+      email: dbRequest.contact_email,
+      phone: dbRequest.contact_phone,
+    },
+    locality: dbRequest.locality,
+    serviceId: dbRequest.service_id || "",
+    serviceName: dbRequest.service_name,
+    providerId: dbRequest.provider_id || "",
+    providerName: dbRequest.provider_name,
+    providerCui: dbRequest.provider_cui,
+    createdAt: dbRequest.created_at || new Date().toISOString(),
+    estimatedStartDate: dbRequest.estimated_start_date || undefined,
+    updatedAt: dbRequest.updated_at || new Date().toISOString(),
+  };
+}
+
+export async function fetchRequests(): Promise<Request[]> {
+  const { data, error } = await supabase
+    .from("requests")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching requests:", error);
+    throw error;
+  }
+
+  return (data || []).map(mapDbRequestToRequest);
+}
+
+export async function createRequest(request: Omit<Request, "id" | "createdAt" | "updatedAt">): Promise<Request> {
+  const dbRequest = {
+    title: request.title,
+    description: request.description,
+    status: request.status,
+    municipality_id: request.municipalityId || null,
+    municipality_name: request.municipalityName,
+    municipality_cui: request.municipalityCui,
+    contact_person: request.contactPerson.name,
+    contact_email: request.contactPerson.email,
+    contact_phone: request.contactPerson.phone,
+    locality: request.locality,
+    service_id: request.serviceId || null,
+    service_name: request.serviceName,
+    provider_id: request.providerId || null,
+    provider_name: request.providerName,
+    provider_cui: request.providerCui,
+    estimated_start_date: request.estimatedStartDate || null,
+    has_estimated_date: !!request.estimatedStartDate,
+  };
+
+  const { data, error } = await supabase
+    .from("requests")
+    .insert([dbRequest])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating request:", error);
+    throw error;
+  }
+
+  return mapDbRequestToRequest(data);
+}
+
+export async function updateRequest(id: string, updates: Partial<Request>): Promise<Request> {
+  const dbUpdates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updates.title !== undefined) dbUpdates.title = updates.title;
+  if (updates.description !== undefined) dbUpdates.description = updates.description;
+  if (updates.status !== undefined) dbUpdates.status = updates.status;
+  if (updates.serviceId !== undefined) dbUpdates.service_id = updates.serviceId;
+  if (updates.serviceName !== undefined) dbUpdates.service_name = updates.serviceName;
+  if (updates.providerId !== undefined) dbUpdates.provider_id = updates.providerId;
+  if (updates.providerName !== undefined) dbUpdates.provider_name = updates.providerName;
+  if (updates.providerCui !== undefined) dbUpdates.provider_cui = updates.providerCui;
+  if (updates.estimatedStartDate !== undefined) {
+    dbUpdates.estimated_start_date = updates.estimatedStartDate || null;
+    dbUpdates.has_estimated_date = !!updates.estimatedStartDate;
+  }
+
+  const { data, error } = await supabase
+    .from("requests")
+    .update(dbUpdates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating request:", error);
+    throw error;
+  }
+
+  return mapDbRequestToRequest(data);
+}
+
+export async function updateRequestStatus(id: string, status: RequestStatus): Promise<Request> {
+  return updateRequest(id, { status });
+}
+
+export async function deleteRequest(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("requests")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting request:", error);
+    throw error;
+  }
+}
+</file>
+
+<file path="services/serviceService.ts">
+import { supabase } from "@/lib/supabase";
+import { DbService } from "@/types/database";
+import { Service } from "@/types";
+
+function mapDbServiceToService(db: DbService): Service {
+  return {
+    id: db.id,
+    name: db.name,
+    description: db.description || "",
+  };
+}
+
+export async function fetchServices(): Promise<Service[]> {
+  const { data, error } = await supabase
+    .from("services")
+    .select("*")
+    .order("name");
+
+  if (error) {
+    console.error("Error fetching services:", error);
+    throw error;
+  }
+
+  return (data || []).map(mapDbServiceToService);
+}
+</file>
+
+<file path="types/database.ts">
+export interface DbMunicipality {
+  id: string;
+  name: string;
+  cui: string;
+  contact_person: string;
+  email: string;
+  phone: string;
+  locality: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DbProvider {
+  id: string;
+  name: string;
+  cui: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DbService {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DbRequest {
+  id: string;
+  municipality_id: string | null;
+  municipality_name: string;
+  municipality_cui: string;
+  contact_person: string;
+  contact_email: string;
+  contact_phone: string;
+  locality: string;
+  provider_id: string | null;
+  provider_name: string;
+  provider_cui: string;
+  service_id: string | null;
+  service_name: string;
+  title: string;
+  description: string | null;
+  estimated_start_date: string | null;
+  has_estimated_date: boolean | null;
+  status: "pending" | "accepted" | "rejected";
+  status_notes: string | null;
+  request_date: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+</file>
+
+<file path="types/index.ts">
+export type RequestStatus = "accepted" | "rejected" | "pending";
+
+export interface Municipality {
+  id: string;
+  name: string;
+  cui: string;
+  contactPerson: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  locality: string;
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  cui: string;
+  services: string[];
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface Request {
+  id: string;
+  title: string;
+  description: string;
+  status: RequestStatus;
+  municipalityId: string;
+  municipalityName: string;
+  municipalityCui: string;
+  contactPerson: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  locality: string;
+  serviceId: string;
+  serviceName: string;
+  providerId: string;
+  providerName: string;
+  providerCui: string;
+  createdAt: string;
+  estimatedStartDate?: string;
+  updatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  type: "success" | "error" | "info" | "warning";
+  message: string;
+  timestamp: number;
+}
+
+export interface DashboardStats {
+  total: number;
+  accepted: number;
+  rejected: number;
+  pending: number;
+}
+
+export interface FilterOptions {
+  status?: RequestStatus | "all";
+  providerId?: string;
+  serviceId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  searchQuery?: string;
+}
+</file>
+
+<file path="utils/helpers.ts">
+import { format, parseISO } from "date-fns";
+import { ro } from "date-fns/locale";
+import { RequestStatus } from "@/types";
+
+export function formatDate(dateString: string): string {
+  try {
+    const date = parseISO(dateString);
+    return format(date, "d MMM yyyy", { locale: ro });
+  } catch {
+    return dateString;
+  }
+}
+
+export function formatDateTime(dateString: string): string {
+  try {
+    const date = parseISO(dateString);
+    return format(date, "d MMM yyyy, HH:mm", { locale: ro });
+  } catch {
+    return dateString;
+  }
+}
+
+export function getCurrentDate(): string {
+  return format(new Date(), "yyyy-MM-dd");
+}
+
+export function getCurrentDateTime(): string {
+  return new Date().toISOString();
+}
+
+export function generateId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function getStatusLabel(status: RequestStatus): string {
+  const labels: Record<RequestStatus, string> = {
+    accepted: "Acceptată",
+    rejected: "Respinsă",
+    pending: "În așteptare",
+  };
+  return labels[status];
+}
+
+export function getStatusColor(status: RequestStatus): string {
+  const colors: Record<RequestStatus, string> = {
+    accepted: "bg-status-accepted",
+    rejected: "bg-status-rejected",
+    pending: "bg-status-pending",
+  };
+  return colors[status];
+}
+
+export function getStatusTextColor(status: RequestStatus): string {
+  const colors: Record<RequestStatus, string> = {
+    accepted: "text-status-accepted",
+    rejected: "text-status-rejected",
+    pending: "text-status-pending",
+  };
+  return colors[status];
+}
+
+export function debounce<T extends (...args: Parameters<T>) => void>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, wait);
+  };
+}
+
+export function classNames(...classes: (string | boolean | undefined)[]): string {
+  return classes.filter(Boolean).join(" ");
+}
+</file>
+
+<file path="vite-env.d.ts">
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_SUPABASE_URL: string;
+  readonly VITE_SUPABASE_ANON_KEY: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+</file>
+
+</files>
