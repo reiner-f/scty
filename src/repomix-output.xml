@@ -116,57 +116,92 @@ pnpm-debug.log*
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
+import { authService } from "./services/authService";
 import { Login } from "./pages/Login";
 import { Layout } from "./components/layout/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { CreateRequest } from "./pages/CreateRequest";
 import { RequestHistory } from "./pages/RequestHistory";
 import { AppProvider } from "./context/AppContext";
+import { UserProfile } from "./types";
 import { Loader2 } from "lucide-react";
 
 function App() {
   const [session, setSession] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificăm sesiunea imediat ce se încarcă app-ul
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
+    let mounted = true;
+
+    // 1. Funcție robustă pentru verificarea inițială
+    const initializeAuth = async () => {
+      try {
+        const data = await authService.getSession();
+        if (mounted && data) {
+          setSession(data);
+          setProfile(data.profile);
+        }
+      } catch (error) {
+        console.error("Eroare severă la verificarea sesiunii:", error);
+      } finally {
+        if (mounted) setLoading(false); // Oprește spinner-ul GARANTAT
+      }
+    };
+
+    initializeAuth();
+
+    // 2. Ascultăm modificările de stare
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (newSession) {
+        try {
+          const userProfile = await authService.getUserProfile(newSession.user.id);
+          if (mounted) {
+            setSession(newSession);
+            setProfile(userProfile);
+          }
+        } catch (error) {
+          console.error("Eroare la obținerea profilului live:", error);
+        }
+      } else {
+        if (mounted) {
+          setSession(null);
+          setProfile(null);
+        }
+      }
+      if (mounted) setLoading(false);
     });
 
-    // Ascultăm în timp real dacă utilizatorul dă Login sau Logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Ecran de încărcare până verificăm dacă e logat
   if (loading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-10 h-10 animate-spin text-primary-600" />
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-sky-600" />
+        <p className="text-slate-500 font-medium">Se verifică datele utilizatorului...</p>
       </div>
     );
   }
 
   return (
     <BrowserRouter>
-      <AppProvider>
+      <AppProvider user={session?.user} profile={profile}>
         {!session ? (
-          /* Rute accesibile FĂRĂ login */
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         ) : (
-          /* Rute securizate (DOAR cu login) */
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/create-request" element={<CreateRequest />} />
+              {profile?.role === 'primarie' && (
+                <Route path="/create-request" element={<CreateRequest />} />
+              )}
               <Route path="/history" element={<RequestHistory />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
@@ -1289,10 +1324,11 @@ import { classNames } from "@/utils/helpers";
 
 export function Header() {
   const location = useLocation();
-  const { toggleProfile, stats } = useApp();
+  // Am adăugat `profile` aici pentru a ști ce rol are utilizatorul logat
+  const { toggleProfile, stats, profile } = useApp(); 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close mobile menu automatically if window resizes to desktop view
+  // Închide meniul de mobil automat dacă se redimensionează fereastra (pe desktop)
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
@@ -1303,11 +1339,31 @@ export function Header() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const navLinks = [
-    { path: "/", label: "Dashboard" },
-    { path: "/create-request", label: "Cerere Nouă" },
-    { path: "/history", label: "Istoric" },
-  ];
+  // Meniu Inteligent în funcție de rolul utilizatorului
+  let navLinks: { path: string; label: string }[] = [];
+  
+  if (profile?.role === 'admin') {
+    navLinks = [
+      { path: "/", label: "Dashboard (Toate Cererile)" },
+      { path: "/history", label: "Istoric General" },
+    ];
+  } else if (profile?.role === 'primarie') {
+    navLinks = [
+      { path: "/", label: "Cererile Mele" },
+      { path: "/create-request", label: "Cerere Nouă" },
+      { path: "/history", label: "Istoric" },
+    ];
+  } else if (profile?.role === 'furnizor') {
+    navLinks = [
+      { path: "/", label: "Cereri Primite" },
+      { path: "/history", label: "Istoric Execuție" },
+    ];
+  } else {
+    // Fallback de siguranță în caz că profilul se încarcă puțin mai greu
+    navLinks = [
+      { path: "/", label: "Dashboard" }
+    ];
+  }
 
   return (
     <header
@@ -1317,7 +1373,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Left Side: Logo & Desktop Nav */}
+          {/* Partea Stângă: Logo & Navigare Desktop */}
           <div className="flex items-center gap-8">
             <Link 
               to="/" 
@@ -1330,7 +1386,6 @@ export function Header() {
               <span className="text-xl font-bold text-white tracking-wide">Centria</span>
             </Link>
 
-            {/* Bug Fix: Moved the .map() inside the <nav> element properly */}
             <nav className="hidden md:flex items-center gap-2">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
@@ -1353,16 +1408,16 @@ export function Header() {
             </nav>
           </div>
 
-          {/* Right Side: Stats & Actions */}
+          {/* Partea Dreaptă: Statistici & Acțiuni */}
           <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Pending Stats Badge */}
+            {/* Badge Statistici (Doar dacă sunt cereri pending) */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-sky-900/40 border border-white/10 rounded-lg shadow-inner">
               <span className="text-sm text-sky-200">Pending:</span>
               <span className="text-sm font-bold text-white">{stats.pending}</span>
             </div>
 
-            {/* Notification Button */}
+            {/* Buton Notificări */}
             <button 
               className="relative p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               aria-label="Notificări"
@@ -1373,7 +1428,7 @@ export function Header() {
               )}
             </button>
 
-            {/* Profile Button */}
+            {/* Buton Profil */}
             <button
               onClick={toggleProfile}
               className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/5 text-white hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
@@ -1383,7 +1438,7 @@ export function Header() {
               <span className="text-sm font-medium">Profil</span>
             </button>
 
-            {/* Mobile Menu Toggle */}
+            {/* Buton Meniu Mobil */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
@@ -1395,7 +1450,7 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
+        {/* Meniu Navigare Mobil */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.nav
@@ -1427,7 +1482,7 @@ export function Header() {
                   );
                 })}
                 
-                {/* Mobile Profile Button (Since it's hidden on small screens in the top bar) */}
+                {/* Buton Profil Mobil */}
                 <button
                   onClick={() => {
                     toggleProfile();
@@ -2712,9 +2767,11 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useMunicipality } from "@/hooks/useMunicipality";
 import { useProviders } from "@/hooks/useProviders";
 import { useServices } from "@/hooks/useServices";
-import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service } from "@/types";
+import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service, UserProfile } from "@/types";
 
 interface AppContextType {
+  user: any;
+  profile: UserProfile | null;
   requests: Request[];
   filteredRequests: Request[];
   filters: FilterOptions;
@@ -2745,14 +2802,17 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const requestsHook = useRequests();
+export function AppProvider({ children, user, profile }: { children: ReactNode, user: any, profile: UserProfile | null }) {
+  // Trimitem profilul în useRequests pentru a filtra datele pe bază de rol
+  const requestsHook = useRequests(profile); 
   const notificationsHook = useNotifications();
   const municipalityHook = useMunicipality();
   const providersHook = useProviders();
   const servicesHook = useServices();
 
   const value: AppContextType = {
+    user,
+    profile,
     requests: requestsHook.requests,
     filteredRequests: requestsHook.filteredRequests,
     filters: requestsHook.filters,
@@ -3170,10 +3230,11 @@ export function useProviders() {
 
 <file path="hooks/useRequests.ts">
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Request, FilterOptions, DashboardStats } from "@/types";
+import { Request, FilterOptions, DashboardStats, UserProfile } from "@/types";
 import { requestService } from "@/services/requestService";
 
-export function useRequests() {
+// NOU: Hook-ul primește profile ca argument
+export function useRequests(profile: UserProfile | null) {
   const [requests, setRequests] = useState<Request[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<FilterOptions>({
@@ -3184,14 +3245,15 @@ export function useRequests() {
   const loadRequests = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await requestService.fetchAll();
+      // NOU: Pasăm profilul către serviciu
+      const data = await requestService.fetchAll(profile);
       setRequests(data);
     } catch (err) {
       console.error("Eroare la încărcare:", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [profile]); // Adăugăm profile în dependențe
 
   useEffect(() => { loadRequests(); }, [loadRequests]);
 
@@ -3723,10 +3785,9 @@ export function RequestHistory() {
 
 <file path="services/authService.ts">
 import { supabase } from "@/lib/supabase";
-import { LoginCredentials } from "@/types";
+import { LoginCredentials, UserProfile } from "@/types";
 
 export const authService = {
-  // Conectare cu email și parolă
   async login({ email, password }: LoginCredentials) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -3736,24 +3797,42 @@ export const authService = {
     return data;
   },
 
-  // Deconectare
   async logout() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
 
-  // Obținerea utilizatorului curent (pentru verificarea sesiunii)
-  async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) return null;
-    return user;
+  // NOU: Funcție care aduce rolul utilizatorului
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Eroare la obținerea profilului:", error);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      role: data.role,
+      entityId: data.entity_id,
+    };
   },
 
-  // Verificarea sesiunii active
   async getSession() {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) return null;
-    return session;
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) return null;
+
+    // AICI E MODIFICAREA: Folosim 'authService' în loc de 'this'
+    const profile = await authService.getUserProfile(session.user.id);
+
+    return {
+      ...session,
+      profile,
+    };
   }
 };
 </file>
@@ -3825,7 +3904,7 @@ export async function fetchProviders(): Promise<Provider[]> {
 <file path="services/requestService.ts">
 import { supabase } from "@/lib/supabase";
 import { DbRequest } from "@/types/database";
-import { Request, RequestStatus } from "@/types";
+import { Request, RequestStatus, UserProfile } from "@/types";
 
 function mapDbRequestToRequest(dbRequest: DbRequest): Request {
   return {
@@ -3854,12 +3933,25 @@ function mapDbRequestToRequest(dbRequest: DbRequest): Request {
 }
 
 export const requestService = {
-  async fetchAll(): Promise<Request[]> {
-    const { data, error } = await supabase
+  // NOU: Acum primește profilul
+  async fetchAll(profile: UserProfile | null): Promise<Request[]> {
+    // Baza query-ului: adu tot, ordonat
+    let query = supabase
       .from("requests")
       .select("*")
       .order("created_at", { ascending: false });
 
+    // Filtrarea inteligentă pe bază de Rol
+    if (profile?.role === "primarie" && profile.entityId) {
+      // Primăria vede doar ce a creat ea
+      query = query.eq("municipality_id", profile.entityId);
+    } else if (profile?.role === "furnizor" && profile.entityId) {
+      // Furnizorul vede doar ce i-a fost atribuit lui
+      query = query.eq("provider_id", profile.entityId);
+    }
+    // Dacă e 'admin', nu adăugăm niciun '.eq', deci vede tot.
+
+    const { data, error } = await query;
     if (error) throw error;
     return (data || []).map(mapDbRequestToRequest);
   },
@@ -3937,62 +4029,494 @@ export async function fetchServices(): Promise<Service[]> {
 </file>
 
 <file path="types/database.ts">
-export interface DbMunicipality {
-  id: string;
-  name: string;
-  cui: string;
-  contact_person: string;
-  email: string;
-  phone: string;
-  locality: string;
-  created_at: string | null;
-  updated_at: string | null;
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      app_users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          name: string | null
+          parola: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          name?: string | null
+          parola?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string | null
+          parola?: string | null
+        }
+        Relationships: []
+      }
+      municipalities: {
+        Row: {
+          contact_person: string
+          created_at: string | null
+          cui: string
+          email: string
+          id: string
+          locality: string
+          name: string
+          phone: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact_person: string
+          created_at?: string | null
+          cui: string
+          email: string
+          id?: string
+          locality: string
+          name: string
+          phone: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact_person?: string
+          created_at?: string | null
+          cui?: string
+          email?: string
+          id?: string
+          locality?: string
+          name?: string
+          phone?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      order_tracking: {
+        Row: {
+          id: string
+          order_id: string | null
+          provider_name: string | null
+          service_name: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          order_id?: string | null
+          provider_name?: string | null
+          service_name?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          order_id?: string | null
+          provider_name?: string | null
+          service_name?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tracking_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          authority_name: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          county: string | null
+          created_at: string | null
+          cui_authority: string | null
+          desired_golive_date: string | null
+          id: string
+          it_provider_name: string | null
+          registration_number: string | null
+          specialized_software: string | null
+          uat_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          authority_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          county?: string | null
+          created_at?: string | null
+          cui_authority?: string | null
+          desired_golive_date?: string | null
+          id?: string
+          it_provider_name?: string | null
+          registration_number?: string | null
+          specialized_software?: string | null
+          uat_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          authority_name?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          county?: string | null
+          created_at?: string | null
+          cui_authority?: string | null
+          desired_golive_date?: string | null
+          id?: string
+          it_provider_name?: string | null
+          registration_number?: string | null
+          specialized_software?: string | null
+          uat_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      providers: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          cui: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          cui: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          cui?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      requests: {
+        Row: {
+          contact_email: string
+          contact_person: string
+          contact_phone: string
+          created_at: string | null
+          description: string | null
+          estimated_start_date: string | null
+          has_estimated_date: boolean | null
+          id: string
+          locality: string
+          municipality_cui: string
+          municipality_id: string | null
+          municipality_name: string
+          provider_cui: string
+          provider_id: string | null
+          provider_name: string
+          request_date: string | null
+          service_id: string | null
+          service_name: string
+          status: string
+          status_notes: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email: string
+          contact_person: string
+          contact_phone: string
+          created_at?: string | null
+          description?: string | null
+          estimated_start_date?: string | null
+          has_estimated_date?: boolean | null
+          id?: string
+          locality: string
+          municipality_cui: string
+          municipality_id?: string | null
+          municipality_name: string
+          provider_cui: string
+          provider_id?: string | null
+          provider_name: string
+          request_date?: string | null
+          service_id?: string | null
+          service_name: string
+          status?: string
+          status_notes?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string
+          contact_person?: string
+          contact_phone?: string
+          created_at?: string | null
+          description?: string | null
+          estimated_start_date?: string | null
+          has_estimated_date?: boolean | null
+          id?: string
+          locality?: string
+          municipality_cui?: string
+          municipality_id?: string | null
+          municipality_name?: string
+          provider_cui?: string
+          provider_id?: string | null
+          provider_name?: string
+          request_date?: string | null
+          service_id?: string | null
+          service_name?: string
+          status?: string
+          status_notes?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_municipality_id_fkey"
+            columns: ["municipality_id"]
+            isOneToOne: false
+            referencedRelation: "municipalities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      app_role: "admin" | "primarie" | "furnizor"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
-export interface DbProvider {
-  id: string;
-  name: string;
-  cui: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-export interface DbService {
-  id: string;
-  name: string;
-  description: string | null;
-  category: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
-export interface DbRequest {
-  id: string;
-  municipality_id: string | null;
-  municipality_name: string;
-  municipality_cui: string;
-  contact_person: string;
-  contact_email: string;
-  contact_phone: string;
-  locality: string;
-  provider_id: string | null;
-  provider_name: string;
-  provider_cui: string;
-  service_id: string | null;
-  service_name: string;
-  title: string;
-  description: string | null;
-  estimated_start_date: string | null;
-  has_estimated_date: boolean | null;
-  status: "pending" | "accepted" | "rejected";
-  status_notes: string | null;
-  request_date: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["admin", "primarie", "furnizor"],
+    },
+  },
+} as const
 </file>
 
 <file path="types/index.ts">
@@ -4076,6 +4600,20 @@ export interface LoginCredentials {
 
 export interface UserSession {
   user: any;
+  access_token: string;
+}
+export type AppRole = "admin" | "primarie" | "furnizor";
+
+export interface UserProfile {
+  id: string;
+  role: AppRole;
+  entityId: string | null; // Va conține id-ul primăriei sau furnizorului
+}
+
+// Actualizăm UserSession ca să includă și profilul
+export interface UserSession {
+  user: any;
+  profile: UserProfile | null;
   access_token: string;
 }
 </file>

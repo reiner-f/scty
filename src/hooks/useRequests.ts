@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Request, FilterOptions, DashboardStats } from "@/types";
+import { Request, FilterOptions, DashboardStats, UserProfile } from "@/types";
 import { requestService } from "@/services/requestService";
 
-export function useRequests() {
+// NOU: Hook-ul primește profile ca argument
+export function useRequests(profile: UserProfile | null) {
   const [requests, setRequests] = useState<Request[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<FilterOptions>({
@@ -13,14 +14,15 @@ export function useRequests() {
   const loadRequests = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await requestService.fetchAll();
+      // NOU: Pasăm profilul către serviciu
+      const data = await requestService.fetchAll(profile);
       setRequests(data);
     } catch (err) {
       console.error("Eroare la încărcare:", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [profile]); // Adăugăm profile în dependențe
 
   useEffect(() => { loadRequests(); }, [loadRequests]);
 

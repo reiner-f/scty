@@ -4,9 +4,11 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useMunicipality } from "@/hooks/useMunicipality";
 import { useProviders } from "@/hooks/useProviders";
 import { useServices } from "@/hooks/useServices";
-import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service } from "@/types";
+import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service, UserProfile } from "@/types";
 
 interface AppContextType {
+  user: any;
+  profile: UserProfile | null;
   requests: Request[];
   filteredRequests: Request[];
   filters: FilterOptions;
@@ -37,14 +39,17 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const requestsHook = useRequests();
+export function AppProvider({ children, user, profile }: { children: ReactNode, user: any, profile: UserProfile | null }) {
+  // Trimitem profilul în useRequests pentru a filtra datele pe bază de rol
+  const requestsHook = useRequests(profile); 
   const notificationsHook = useNotifications();
   const municipalityHook = useMunicipality();
   const providersHook = useProviders();
   const servicesHook = useServices();
 
   const value: AppContextType = {
+    user,
+    profile,
     requests: requestsHook.requests,
     filteredRequests: requestsHook.filteredRequests,
     filters: requestsHook.filters,

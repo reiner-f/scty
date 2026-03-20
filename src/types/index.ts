@@ -80,3 +80,17 @@ export interface UserSession {
   user: any;
   access_token: string;
 }
+export type AppRole = "admin" | "primarie" | "furnizor";
+
+export interface UserProfile {
+  id: string;
+  role: AppRole;
+  entityId: string | null; // Va conține id-ul primăriei sau furnizorului
+}
+
+// Actualizăm UserSession ca să includă și profilul
+export interface UserSession {
+  user: any;
+  profile: UserProfile | null;
+  access_token: string;
+}

@@ -1,8 +1,7 @@
 import { supabase } from "@/lib/supabase";
-import { LoginCredentials } from "@/types";
+import { LoginCredentials, UserProfile } from "@/types";
 
 export const authService = {
-  // Conectare cu email și parolă
   async login({ email, password }: LoginCredentials) {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -12,23 +11,41 @@ export const authService = {
     return data;
   },
 
-  // Deconectare
   async logout() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
 
-  // Obținerea utilizatorului curent (pentru verificarea sesiunii)
-  async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) return null;
-    return user;
+  // NOU: Funcție care aduce rolul utilizatorului
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Eroare la obținerea profilului:", error);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      role: data.role,
+      entityId: data.entity_id,
+    };
   },
 
-  // Verificarea sesiunii active
   async getSession() {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) return null;
-    return session;
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) return null;
+
+    // AICI E MODIFICAREA: Folosim 'authService' în loc de 'this'
+    const profile = await authService.getUserProfile(session.user.id);
+
+    return {
+      ...session,
+      profile,
+    };
   }
 };

@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { DbRequest } from "@/types/database";
-import { Request, RequestStatus } from "@/types";
+import { Request, RequestStatus, UserProfile } from "@/types";
 
 function mapDbRequestToRequest(dbRequest: DbRequest): Request {
   return {
@@ -29,12 +29,25 @@ function mapDbRequestToRequest(dbRequest: DbRequest): Request {
 }
 
 export const requestService = {
-  async fetchAll(): Promise<Request[]> {
-    const { data, error } = await supabase
+  // NOU: Acum primește profilul
+  async fetchAll(profile: UserProfile | null): Promise<Request[]> {
+    // Baza query-ului: adu tot, ordonat
+    let query = supabase
       .from("requests")
       .select("*")
       .order("created_at", { ascending: false });
 
+    // Filtrarea inteligentă pe bază de Rol
+    if (profile?.role === "primarie" && profile.entityId) {
+      // Primăria vede doar ce a creat ea
+      query = query.eq("municipality_id", profile.entityId);
+    } else if (profile?.role === "furnizor" && profile.entityId) {
+      // Furnizorul vede doar ce i-a fost atribuit lui
+      query = query.eq("provider_id", profile.entityId);
+    }
+    // Dacă e 'admin', nu adăugăm niciun '.eq', deci vede tot.
+
+    const { data, error } = await query;
     if (error) throw error;
     return (data || []).map(mapDbRequestToRequest);
   },

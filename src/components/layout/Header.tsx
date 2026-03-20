@@ -7,10 +7,11 @@ import { classNames } from "@/utils/helpers";
 
 export function Header() {
   const location = useLocation();
-  const { toggleProfile, stats } = useApp();
+  // Am adăugat `profile` aici pentru a ști ce rol are utilizatorul logat
+  const { toggleProfile, stats, profile } = useApp(); 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close mobile menu automatically if window resizes to desktop view
+  // Închide meniul de mobil automat dacă se redimensionează fereastra (pe desktop)
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
@@ -21,11 +22,31 @@ export function Header() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const navLinks = [
-    { path: "/", label: "Dashboard" },
-    { path: "/create-request", label: "Cerere Nouă" },
-    { path: "/history", label: "Istoric" },
-  ];
+  // Meniu Inteligent în funcție de rolul utilizatorului
+  let navLinks: { path: string; label: string }[] = [];
+  
+  if (profile?.role === 'admin') {
+    navLinks = [
+      { path: "/", label: "Dashboard (Toate Cererile)" },
+      { path: "/history", label: "Istoric General" },
+    ];
+  } else if (profile?.role === 'primarie') {
+    navLinks = [
+      { path: "/", label: "Cererile Mele" },
+      { path: "/create-request", label: "Cerere Nouă" },
+      { path: "/history", label: "Istoric" },
+    ];
+  } else if (profile?.role === 'furnizor') {
+    navLinks = [
+      { path: "/", label: "Cereri Primite" },
+      { path: "/history", label: "Istoric Execuție" },
+    ];
+  } else {
+    // Fallback de siguranță în caz că profilul se încarcă puțin mai greu
+    navLinks = [
+      { path: "/", label: "Dashboard" }
+    ];
+  }
 
   return (
     <header
@@ -35,7 +56,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Left Side: Logo & Desktop Nav */}
+          {/* Partea Stângă: Logo & Navigare Desktop */}
           <div className="flex items-center gap-8">
             <Link 
               to="/" 
@@ -48,7 +69,6 @@ export function Header() {
               <span className="text-xl font-bold text-white tracking-wide">Centria</span>
             </Link>
 
-            {/* Bug Fix: Moved the .map() inside the <nav> element properly */}
             <nav className="hidden md:flex items-center gap-2">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
@@ -71,16 +91,16 @@ export function Header() {
             </nav>
           </div>
 
-          {/* Right Side: Stats & Actions */}
+          {/* Partea Dreaptă: Statistici & Acțiuni */}
           <div className="flex items-center gap-2 sm:gap-3">
             
-            {/* Pending Stats Badge */}
+            {/* Badge Statistici (Doar dacă sunt cereri pending) */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-sky-900/40 border border-white/10 rounded-lg shadow-inner">
               <span className="text-sm text-sky-200">Pending:</span>
               <span className="text-sm font-bold text-white">{stats.pending}</span>
             </div>
 
-            {/* Notification Button */}
+            {/* Buton Notificări */}
             <button 
               className="relative p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
               aria-label="Notificări"
@@ -91,7 +111,7 @@ export function Header() {
               )}
             </button>
 
-            {/* Profile Button */}
+            {/* Buton Profil */}
             <button
               onClick={toggleProfile}
               className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/5 text-white hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
@@ -101,7 +121,7 @@ export function Header() {
               <span className="text-sm font-medium">Profil</span>
             </button>
 
-            {/* Mobile Menu Toggle */}
+            {/* Buton Meniu Mobil */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
@@ -113,7 +133,7 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
+        {/* Meniu Navigare Mobil */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.nav
@@ -145,7 +165,7 @@ export function Header() {
                   );
                 })}
                 
-                {/* Mobile Profile Button (Since it's hidden on small screens in the top bar) */}
+                {/* Buton Profil Mobil */}
                 <button
                   onClick={() => {
                     toggleProfile();
