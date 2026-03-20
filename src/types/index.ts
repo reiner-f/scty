@@ -71,3 +71,12 @@ export interface FilterOptions {
   dateTo?: string;
   searchQuery?: string;
 }
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface UserSession {
+  user: any;
+  access_token: string;
+}
