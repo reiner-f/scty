@@ -76,8 +76,12 @@ lib/supabase.ts
 main.tsx
 pages/CreateRequest.tsx
 pages/Dashboard.tsx
+pages/dashboards/AdminDashboard.tsx
+pages/dashboards/FurnizorDashboard.tsx
+pages/dashboards/PrimarieDashboard.tsx
 pages/Login.tsx
 pages/RequestHistory.tsx
+services/adminService.ts
 services/authService.ts
 services/municipalityService.ts
 services/providerService.ts
@@ -130,46 +134,80 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("Se conectează la baza de date...");
 
   useEffect(() => {
     let mounted = true;
 
-    // 1. Funcție robustă pentru verificarea inițială
     const initializeAuth = async () => {
+      if (!mounted) return;
+      
       try {
-        const data = await authService.getSession();
-        if (mounted && data) {
-          setSession(data);
-          setProfile(data.profile);
+        setLoadingMessage("Se verifică sesiunea ta...");
+        const { data: { session: activeSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Supabase Auth Error:", error.message);
+          throw error;
+        }
+
+        if (activeSession && mounted) {
+          setLoadingMessage("Se încarcă profilul tău de utilizator...");
+          const userProfile = await authService.getUserProfile(activeSession.user.id);
+          
+          setSession(activeSession);
+          setProfile(userProfile);
         }
       } catch (error) {
-        console.error("Eroare severă la verificarea sesiunii:", error);
+        console.error("Eroare severă de inițializare:", error);
       } finally {
-        if (mounted) setLoading(false); // Oprește spinner-ul GARANTAT
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     initializeAuth();
 
-    // 2. Ascultăm modificările de stare
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (newSession) {
-        try {
-          const userProfile = await authService.getUserProfile(newSession.user.id);
-          if (mounted) {
-            setSession(newSession);
-            setProfile(userProfile);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log("🔄 Stare nouă Supabase:", event);
+      if (!mounted) return;
+
+      // Unii clienți Supabase folosesc INITIAL_SESSION, alții SIGNED_IN
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        if (newSession) {
+          try {
+            setLoading(true);
+            setLoadingMessage("Se aduc datele profilului...");
+            console.log("⬇️ Descărcăm profilul pentru ID:", newSession.user.id);
+            
+            const userProfile = await authService.getUserProfile(newSession.user.id);
+            console.log("✅ Profil descărcat:", userProfile);
+
+            if (mounted) {
+              setSession(newSession);
+              setProfile(userProfile);
+            }
+          } catch (err) {
+            console.error("❌ Eroare la descărcarea profilului (SIGNED_IN):", err);
+          } finally {
+            console.log("⏹️ Oprim ecranul de încărcare (garanție).");
+            if (mounted) setLoading(false);
           }
-        } catch (error) {
-          console.error("Eroare la obținerea profilului live:", error);
         }
-      } else {
+      } 
+      else if (event === 'TOKEN_REFRESHED') {
+        if (newSession && mounted) {
+          setSession(newSession);
+        }
+      } 
+      else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setSession(null);
           setProfile(null);
+          setLoading(false);
         }
       }
-      if (mounted) setLoading(false);
     });
 
     return () => {
@@ -180,9 +218,12 @@ function App() {
 
   if (loading) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-sky-600" />
-        <p className="text-slate-500 font-medium">Se verifică datele utilizatorului...</p>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-5">
+        <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-xl text-slate-800 font-bold">Vă rugăm așteptați</p>
+          <p className="text-slate-500 font-medium">{loadingMessage}</p>
+        </div>
       </div>
     );
   }
@@ -1045,7 +1086,7 @@ Textarea.displayName = "Textarea";
 </file>
 
 <file path="components/dashboard/RequestCard.tsx">
-import React from "react";
+import React, { forwardRef } from "react";
 import { motion } from "motion/react";
 import { Building, Calendar, Edit2, Trash2, ChevronRight } from "lucide-react";
 import { Request, RequestStatus } from "@/types";
@@ -1058,18 +1099,18 @@ interface RequestCardProps {
   onClick?: () => void;
   onEdit?: (request: Request) => void;
   onDelete?: (request: Request) => void;
-  // ADAUGAT: Această linie repară eroarea din RequestList
   onStatusChange?: (id: string, status: RequestStatus) => void;
 }
 
-export function RequestCard({ 
+// AICI ESTE REPARAȚIA: Am adăugat forwardRef
+export const RequestCard = forwardRef<HTMLDivElement, RequestCardProps>(({ 
   request, 
   index = 0, 
   onClick, 
   onEdit, 
   onDelete,
-  onStatusChange // ADAUGAT
-}: RequestCardProps) {
+  onStatusChange 
+}, ref) => {
   
   const statusBorder = {
     accepted: "border-l-emerald-400",
@@ -1079,6 +1120,7 @@ export function RequestCard({
 
   return (
     <motion.div
+      ref={ref} // Și am pasat ref-ul către Framer Motion
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -1132,7 +1174,10 @@ export function RequestCard({
       </div>
     </motion.div>
   );
-}
+});
+
+// Este o bună practică pentru componentele cu forwardRef
+RequestCard.displayName = "RequestCard";
 </file>
 
 <file path="components/dashboard/StatsCard.tsx">
@@ -2694,8 +2739,16 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { Request, RequestStatus } from "@/types";
 import { useApp } from "@/context/AppContext";
 
-export function RequestList({ requests, title }: { requests: Request[], title?: string }) {
-  const { updateRequest, deleteRequest, notifySuccess, notifyError } = useApp();
+// 1. Am definit clar ce "Props" poate primi această componentă
+interface RequestListProps {
+  requests: Request[];
+  title?: string;
+  emptyMessage?: string;
+  onUpdateStatus?: (id: string, status: RequestStatus) => void;
+}
+
+export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: RequestListProps) {
+  const { updateRequest, deleteRequest } = useApp();
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [modalState, setModalState] = useState<{ type: 'detail' | 'edit' | 'delete' | null }>({ type: null });
 
@@ -2709,7 +2762,6 @@ export function RequestList({ requests, title }: { requests: Request[], title?: 
     setSelectedRequest(null);
   };
 
-  // Reparație Eroare onSave: Wrapp-uim funcția pentru a returna Promise<void>
   const handleSaveRequest = async (id: string, updates: Partial<Request>): Promise<void> => {
     await updateRequest(id, updates);
   };
@@ -2718,28 +2770,34 @@ export function RequestList({ requests, title }: { requests: Request[], title?: 
     <div className="space-y-4">
       {title && <h2 className="text-xl font-bold text-slate-800">{title} ({requests.length})</h2>}
       
-      <div className="flex flex-col gap-3">
-        <AnimatePresence mode="popLayout">
-          {requests.map((req, index) => (
-            <RequestCard
-              key={req.id}
-              request={req}
-              index={index}
-              onClick={() => handleAction(req, 'detail')}
-              // Reparație Eroare onStatusChange: Folosim tipuri explicite (id: string, status: RequestStatus)
-              // Notă: Dacă eroarea persistă, verifică Interfața RequestCardProps în RequestCard.tsx
-              onEdit={() => handleAction(req, 'edit')}
-              onDelete={() => handleAction(req, 'delete')}
-            />
-          ))}
-        </AnimatePresence>
-      </div>
+      {/* 2. Tratăm cazul în care lista este goală */}
+      {requests.length === 0 && emptyMessage ? (
+        <div className="p-8 text-center bg-white border border-slate-200 rounded-xl text-slate-500">
+          {emptyMessage}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <AnimatePresence mode="popLayout">
+            {requests.map((req, index) => (
+              <RequestCard
+                key={req.id}
+                request={req}
+                index={index}
+                onClick={() => handleAction(req, 'detail')}
+                onEdit={() => handleAction(req, 'edit')}
+                onDelete={() => handleAction(req, 'delete')}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
       <RequestDetailModal 
         isOpen={modalState.type === 'detail'} 
         request={selectedRequest} 
         onClose={closeModals}
-        onUpdateStatus={(id, status) => updateRequest(id, { status })}
+        // 3. Pasăm onUpdateStatus mai departe către modal
+        onUpdateStatus={onUpdateStatus}
       />
 
       <EditRequestModal 
@@ -3467,106 +3525,364 @@ export function CreateRequest() {
 
 <file path="pages/Dashboard.tsx">
 import React from "react";
+import { useApp } from "@/context/AppContext";
+import { Clock } from "lucide-react";
+
+import { PrimarieDashboard } from "./dashboards/PrimarieDashboard";
+import { FurnizorDashboard } from "./dashboards/FurnizorDashboard";
+import { AdminDashboard } from "./dashboards/AdminDashboard";
+
+export function Dashboard() {
+  const { profile } = useApp();
+
+  // Dacă profilul nu există sau nu are un rol, arătăm un ecran de "Așteptare Aprobare"
+  if (!profile || !profile.role) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center px-4">
+        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center shadow-inner mb-6">
+          <Clock className="w-10 h-10" />
+        </div>
+        <h2 className="text-3xl font-bold text-slate-900 mb-3">Cont în așteptare</h2>
+        <p className="text-lg text-slate-500 max-w-md">
+          Contul tău a fost creat cu succes, dar nu are încă un rol atribuit. 
+          Te rugăm să aștepți ca un administrator să îți aprobe accesul.
+        </p>
+      </div>
+    );
+  }
+
+  // Aici facem MAGIC ROUTING pe bază de rol!
+  switch (profile.role) {
+    case "admin":
+      return <AdminDashboard />;
+    case "furnizor":
+      return <FurnizorDashboard />;
+    case "primarie":
+      return <PrimarieDashboard />;
+    default:
+      return (
+        <div className="text-center py-20 text-rose-500 font-bold">
+          Eroare: Rol necunoscut ({profile.role}). Contactați administratorul.
+        </div>
+      );
+  }
+}
+</file>
+
+<file path="pages/dashboards/AdminDashboard.tsx">
+import React, { useState, useEffect } from "react";
+import { ShieldCheck, Plus, Users, Building, Briefcase, FileText, Save, Loader2 } from "lucide-react";
+import { Button } from "@/components/common/Button";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { useApp } from "@/context/AppContext";
+import { createProvider } from "@/services/providerService";
+import { fetchAllMunicipalities, createMunicipality } from "@/services/municipalityService";
+import { adminService, AdminUserView } from "@/services/adminService";
+import { RequestList } from "@/components/requests/RequestList";
+import { Municipality, AppRole, RequestStatus } from "@/types";
+
+type TabType = 'cereri' | 'utilizatori' | 'primarii' | 'furnizori';
+
+export function AdminDashboard() {
+  const { filteredRequests, notifySuccess, notifyError, updateRequest, providers } = useApp();
+  const [activeTab, setActiveTab] = useState<TabType>('cereri');
+
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
+  const [users, setUsers] = useState<AdminUserView[]>([]);
+  const [isLoadingExtra, setIsLoadingExtra] = useState(false);
+
+  // Form states
+  const [newProvName, setNewProvName] = useState("");
+  const [newProvCui, setNewProvCui] = useState("");
+  const [munData, setMunData] = useState({ name: '', cui: '', contact_person: '', email: '', phone: '', locality: '' });
+
+  useEffect(() => {
+    loadAdminData();
+  }, []);
+
+  const loadAdminData = async () => {
+    setIsLoadingExtra(true);
+    try {
+      setMunicipalities(await fetchAllMunicipalities());
+      setUsers(await adminService.getAllUsers());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingExtra(false);
+    }
+  };
+
+  const handleAddProvider = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createProvider(newProvName, newProvCui, "contact@furnizor.ro");
+      notifySuccess("Furnizor adăugat! Te rugăm să reîncarci pagina pentru a-l vedea în dropdown-uri.");
+      setNewProvName(""); setNewProvCui("");
+    } catch (err) { notifyError("Eroare la adăugare furnizor"); }
+  };
+
+  const handleAddMunicipality = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createMunicipality(munData);
+      notifySuccess("Primărie adăugată cu succes!");
+      setMunData({ name: '', cui: '', contact_person: '', email: '', phone: '', locality: '' });
+      loadAdminData();
+    } catch (err) { notifyError("Eroare la adăugare primărie."); }
+  };
+
+  const handleUserChange = (userId: string, field: 'role' | 'entityId', value: string) => {
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const updated = { ...u, [field]: value === "none" ? null : value };
+        if (field === 'role') updated.entityId = null; // Resetăm entitatea dacă schimbăm rolul
+        return updated;
+      }
+      return u;
+    }));
+  };
+
+  const saveUserMapping = async (user: AdminUserView) => {
+    if (!user.role) return notifyError("Selectează un rol!");
+    if (user.role !== 'admin' && !user.entityId) return notifyError("Selectează instituția de care aparține!");
+    
+    try {
+      await adminService.updateUserMapping(user.id, user.role as AppRole, user.entityId);
+      notifySuccess(`Utilizatorul ${user.email} a fost actualizat!`);
+    } catch (err) { notifyError("Eroare la salvarea utilizatorului."); }
+  };
+
+  const tabs = [
+    { id: 'cereri', label: 'Monitorizare', icon: FileText },
+    { id: 'utilizatori', label: 'Utilizatori', icon: Users },
+    { id: 'primarii', label: 'Primării', icon: Building },
+    { id: 'furnizori', label: 'Furnizori', icon: Briefcase },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 rounded-md bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
+          <ShieldCheck className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Panou Administrator</h1>
+          <p className="text-slate-500">Gestiunea sistemului și a utilizatorilor</p>
+        </div>
+      </div>
+
+      {/* Navigație Tab-uri */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4 mb-6">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as TabType)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+              activeTab === tab.id
+                ? 'bg-purple-50 text-purple-700 shadow-sm border border-purple-100'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" /> {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Conținut Tab-uri */}
+      {activeTab === 'cereri' && (
+        <RequestList 
+          requests={filteredRequests} 
+          emptyMessage="Nu există nicio cerere în sistem." 
+          title="Toate Cererile" 
+          onUpdateStatus={(id: string, status: RequestStatus) => updateRequest(id, { status })} 
+        />
+      )}
+
+      {activeTab === 'utilizatori' && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          {isLoadingExtra ? (
+            <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-purple-500" /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="p-4 font-semibold text-slate-600">Email Utilizator</th>
+                    <th className="p-4 font-semibold text-slate-600 w-48">Rol Funcțional</th>
+                    <th className="p-4 font-semibold text-slate-600 w-72">Instituție Asociată</th>
+                    <th className="p-4 font-semibold text-slate-600 text-right">Acțiune</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {users.map(u => (
+                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4 font-medium text-slate-900">{u.email}</td>
+                      <td className="p-4">
+                        <Select
+                          value={u.role || "none"}
+                          onChange={(e) => handleUserChange(u.id, 'role', e.target.value)}
+                          options={[
+                            { value: "none", label: "Fără Rol" },
+                            { value: "admin", label: "Admin Global" },
+                            { value: "primarie", label: "Primărie" },
+                            { value: "furnizor", label: "Furnizor" }
+                          ]}
+                        />
+                      </td>
+                      <td className="p-4">
+                        <Select
+                          value={u.entityId || "none"}
+                          onChange={(e) => handleUserChange(u.id, 'entityId', e.target.value)}
+                          disabled={!u.role || u.role === 'admin'}
+                          options={[
+                            { value: "none", label: "Selectează instituția..." },
+                            ...(u.role === 'primarie' ? municipalities.map(m => ({ value: m.id, label: m.name })) : []),
+                            ...(u.role === 'furnizor' ? providers.map(p => ({ value: p.id, label: p.name })) : [])
+                          ]}
+                        />
+                      </td>
+                      <td className="p-4 text-right">
+                        <Button size="sm" onClick={() => saveUserMapping(u)} leftIcon={<Save className="w-4 h-4"/>}> Salvează </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'primarii' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-3xl">
+          <h3 className="font-bold text-lg mb-6 flex items-center gap-2"><Building className="w-5 h-5 text-purple-600"/> Adaugă Primărie Nouă</h3>
+          <form onSubmit={handleAddMunicipality} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label="Denumire Instituție" value={munData.name} onChange={e => setMunData({...munData, name: e.target.value})} required />
+            <Input label="Cod Fiscal (CUI)" value={munData.cui} onChange={e => setMunData({...munData, cui: e.target.value})} required />
+            <Input label="Localitate / Județ" value={munData.locality} onChange={e => setMunData({...munData, locality: e.target.value})} required />
+            <Input label="Nume Contact" value={munData.contact_person} onChange={e => setMunData({...munData, contact_person: e.target.value})} required />
+            <Input label="Email Contact" type="email" value={munData.email} onChange={e => setMunData({...munData, email: e.target.value})} required />
+            <Input label="Telefon Contact" value={munData.phone} onChange={e => setMunData({...munData, phone: e.target.value})} required />
+            <div className="sm:col-span-2 flex justify-end mt-4">
+              <Button type="submit" variant="primary" leftIcon={<Plus className="w-4 h-4" />}>Înregistrează Primăria</Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {activeTab === 'furnizori' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-xl">
+          <h3 className="font-bold text-lg mb-6 flex items-center gap-2"><Briefcase className="w-5 h-5 text-purple-600"/> Adaugă Furnizor Nou</h3>
+          <form onSubmit={handleAddProvider} className="space-y-4">
+            <Input label="Nume Companie" value={newProvName} onChange={(e) => setNewProvName(e.target.value)} required />
+            <Input label="Cod Fiscal (CUI)" value={newProvCui} onChange={(e) => setNewProvCui(e.target.value)} required />
+            <div className="flex justify-end pt-2">
+              <Button type="submit" variant="primary" leftIcon={<Plus className="w-4 h-4" />}>Adaugă Furnizor</Button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="pages/dashboards/FurnizorDashboard.tsx">
+import React from "react";
+import { motion } from "motion/react";
+import { Briefcase, Loader2, CheckCircle, Clock } from "lucide-react";
+import { RequestList } from "@/components/requests/RequestList";
+import { SearchBar } from "@/components/common/SearchBar";
+import { useApp } from "@/context/AppContext";
+import { StatsCard } from "@/components/dashboard/StatsCard";
+
+export function FurnizorDashboard() {
+  const { filteredRequests, filters, setFilter, updateRequest, notifySuccess, notifyError, isLoadingRequests, stats } = useApp();
+
+  const handleStatusUpdate = async (id: string, status: "accepted" | "rejected" | "pending") => {
+    try {
+      await updateRequest(id, { status });
+      notifySuccess(`Status actualizat la: ${status}`);
+    } catch {
+      notifyError("Eroare la actualizarea statusului.");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-md bg-gradient-to-br from-emerald-600 to-emerald-800 flex items-center justify-center shadow-sm">
+          <Briefcase className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Panou Furnizor</h1>
+          <p className="text-slate-500">Vizualizează și răspunde la cererile primite</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StatsCard title="Cereri de Soluționat (Pending)" value={stats.pending} icon={Clock} color="yellow" />
+        <StatsCard title="Cereri Acceptate" value={stats.accepted} icon={CheckCircle} color="green" />
+      </div>
+
+      <SearchBar value={filters.searchQuery || ""} onChange={(v) => setFilter("searchQuery", v)} placeholder="Caută în cererile primite..." />
+
+      {isLoadingRequests ? (
+        <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-emerald-500" /></div>
+      ) : (
+        <RequestList 
+          requests={filteredRequests} 
+          title="Cereri Atribuite Ție" 
+          onUpdateStatus={handleStatusUpdate} // Furnizorul ARE voie să schimbe statusul
+        />
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="pages/dashboards/PrimarieDashboard.tsx">
+import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
-import { Plus, FileStack, CheckCircle, XCircle, Clock, Loader2, LayoutDashboard } from "lucide-react";
-import { StatsCard } from "@/components/dashboard/StatsCard";
+import { Plus, LayoutDashboard, Loader2 } from "lucide-react";
 import { RequestList } from "@/components/requests/RequestList";
 import { SearchBar } from "@/components/common/SearchBar";
 import { Button } from "@/components/common/Button";
 import { useApp } from "@/context/AppContext";
 
-export function Dashboard() {
-  const {
-    stats,
-    filteredRequests,
-    filters,
-    setFilter,
-    updateRequest,
-    notifySuccess,
-    notifyError,
-    isLoadingRequests,
-  } = useApp();
-
-  const handleStatusUpdate = async (id: string, status: "accepted" | "rejected" | "pending") => {
-    try {
-      await updateRequest(id, { status });
-      const messages: Record<string, string> = {
-        accepted: "Cererea a fost acceptată!",
-        rejected: "Cererea a fost respinsă!",
-        pending: "Cererea a fost resetată la pending!",
-      };
-      notifySuccess(messages[status]);
-    } catch {
-      notifyError("A apărut o eroare la actualizarea cererii");
-    }
-  };
+export function PrimarieDashboard() {
+  const { filteredRequests, filters, setFilter, isLoadingRequests } = useApp();
 
   return (
-    <div id="centria_dashboard" className="space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-      >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-md bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center shadow-sm">
+          <div className="w-12 h-12 rounded-md bg-gradient-to-br from-sky-600 to-sky-800 flex items-center justify-center shadow-sm">
             <LayoutDashboard className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-primary-900">Dashboard</h1>
-            <p className="text-lg text-primary-500 mt-0.5">
-              Gestionează cererile către furnizori
-            </p>
+            <h1 className="text-3xl font-bold text-slate-900">Panou Primărie</h1>
+            <p className="text-slate-500">Gestionează cererile tale către furnizori</p>
           </div>
         </div>
         <Link to="/create-request">
-          <Button variant="primary" leftIcon={<Plus className="w-5 h-5" />}>
-            Cerere Nouă
-          </Button>
+          <Button variant="primary" leftIcon={<Plus className="w-5 h-5" />}>Cerere Nouă</Button>
         </Link>
-      </motion.div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard title="Total Cereri" value={stats.total} icon={FileStack} color="blue" delay={0} />
-        <StatsCard title="Acceptate" value={stats.accepted} icon={CheckCircle} color="green" delay={0.1} />
-        <StatsCard title="Respinse" value={stats.rejected} icon={XCircle} color="red" delay={0.2} />
-        <StatsCard title="În Așteptare" value={stats.pending} icon={Clock} color="yellow" delay={0.3} />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4"
-      >
-        <SearchBar
-          value={filters.searchQuery || ""}
-          onChange={(value) => setFilter("searchQuery", value)}
-          placeholder="Caută după titlu, serviciu sau furnizor..."
-        />
-        <div className="flex gap-2">
-          <Link to="/history">
-            <Button variant="outline" leftIcon={<FileStack className="w-4 h-4" />}>
-              Vezi Istoric
-            </Button>
-          </Link>
-        </div>
-      </motion.div>
+      <SearchBar
+        value={filters.searchQuery || ""}
+        onChange={(value) => setFilter("searchQuery", value)}
+        placeholder="Caută în cererile tale..."
+      />
 
       {isLoadingRequests ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="w-10 h-10 animate-spin text-primary-400 mb-4" />
-          <span className="text-lg text-primary-500">Se încarcă cererile...</span>
-        </div>
+        <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>
       ) : (
-        <RequestList
-          requests={filteredRequests}
-          title="Cereri Recente"
-          emptyMessage="Nu există cereri. Creează prima ta cerere!"
-          onUpdateStatus={handleStatusUpdate}
-        />
+        <RequestList requests={filteredRequests} title="Cererile Mele" />
+        // Observă că NU i-am pasat onUpdateStatus. Deci primăria nu poate da "Accept/Reject".
       )}
     </div>
   );
@@ -3783,6 +4099,53 @@ export function RequestHistory() {
 }
 </file>
 
+<file path="services/adminService.ts">
+import { supabase } from "@/lib/supabase";
+import { AppRole } from "@/types";
+
+export interface AdminUserView {
+  id: string;
+  email: string;
+  name: string | null;
+  role: AppRole | null;
+  entityId: string | null;
+}
+
+export const adminService = {
+  // Aduce toți utilizatorii combinând tabela de conturi cu cea de roluri
+  async getAllUsers(): Promise<AdminUserView[]> {
+    const { data: users, error: userError } = await supabase.from("app_users").select("*");
+    const { data: profiles, error: profError } = await supabase.from("user_profiles").select("*");
+
+    if (userError) throw userError;
+
+    const profilesData = profiles || [];
+    return (users || []).map(u => {
+      const profile = profilesData.find(p => p.id === u.id);
+      return {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: profile?.role || null,
+        entityId: profile?.entity_id || null,
+      };
+    });
+  },
+
+  // Salvează noul rol și asocierea cu o instituție
+  async updateUserMapping(id: string, role: AppRole, entityId: string | null) {
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .upsert({ id, role, entity_id: entityId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+};
+</file>
+
 <file path="services/authService.ts">
 import { supabase } from "@/lib/supabase";
 import { LoginCredentials, UserProfile } from "@/types";
@@ -3802,26 +4165,49 @@ export const authService = {
     if (error) throw error;
   },
 
-  // NOU: Funcție care aduce rolul utilizatorului
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    console.log("-> [AuthService] Cerem profilul pentru ID-ul:", userId);
 
-    if (error) {
-      console.error("Eroare la obținerea profilului:", error);
+    try {
+      // Creăm cererea către Supabase
+      const fetchProfile = supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      // Creăm o bombă cu ceas (5 secunde)
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("TIMEOUT_BAZA_DE_DATE")), 5000)
+      );
+
+      // Le punem la întrecere: care termină prima?
+      const response: any = await Promise.race([fetchProfile, timeout]);
+
+      if (response.error) {
+        console.error("-> [AuthService] Supabase a returnat o eroare:", response.error);
+        return null;
+      }
+
+      console.log("-> [AuthService] Date primite cu succes:", response.data);
+
+      if (!response.data) return null;
+
+      return {
+        id: response.data.id,
+        role: response.data.role,
+        entityId: response.data.entity_id,
+      };
+
+    } catch (error: any) {
+      if (error.message === "TIMEOUT_BAZA_DE_DATE") {
+        console.error("❌ [AuthService] Baza de date NU a răspuns în 5 secunde! (Timeout)");
+      } else {
+        console.error("❌ [AuthService] Eroare critică:", error);
+      }
       return null;
     }
-
-    return {
-      id: data.id,
-      role: data.role,
-      entityId: data.entity_id,
-    };
   },
-
   async getSession() {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) return null;
@@ -3839,65 +4225,68 @@ export const authService = {
 
 <file path="services/municipalityService.ts">
 import { supabase } from "@/lib/supabase";
-import { DbMunicipality } from "@/types/database";
+import { Database } from "@/types/database";
 import { Municipality } from "@/types";
+// Extragem tipurile corecte din structura Supabase
+type DbMunicipality = Database["public"]["Tables"]["municipalities"]["Row"];
+type DbMunicipalityInsert = Database["public"]["Tables"]["municipalities"]["Insert"];
 
 function mapDbMunicipalityToMunicipality(db: DbMunicipality): Municipality {
   return {
-    id: db.id,
-    name: db.name,
-    cui: db.cui,
-    contactPerson: {
-      name: db.contact_person,
-      email: db.email,
-      phone: db.phone,
-    },
+    id: db.id, name: db.name, cui: db.cui,
+    contactPerson: { name: db.contact_person, email: db.email, phone: db.phone },
     locality: db.locality,
   };
 }
 
 export async function fetchMunicipality(): Promise<Municipality | null> {
-  const { data, error } = await supabase
-    .from("municipalities")
-    .select("*")
-    .limit(1)
-    .single();
-
-  if (error) {
-    console.error("Error fetching municipality:", error);
-    return null;
-  }
-
+  const { data, error } = await supabase.from("municipalities").select("*").limit(1).single();
+  if (error) return null;
   return data ? mapDbMunicipalityToMunicipality(data) : null;
+}
+
+export async function fetchAllMunicipalities(): Promise<Municipality[]> {
+  const { data, error } = await supabase.from("municipalities").select("*").order("name");
+  if (error) throw error;
+  return (data || []).map(mapDbMunicipalityToMunicipality);
+}
+
+// NOU: Funcție pentru Admin
+export async function createMunicipality(payload: DbMunicipalityInsert): Promise<Municipality> {
+  const { data, error } = await supabase.from("municipalities").insert([payload]).select().single();
+  if (error) throw error;
+  return mapDbMunicipalityToMunicipality(data);
 }
 </file>
 
 <file path="services/providerService.ts">
 import { supabase } from "@/lib/supabase";
-import { DbProvider } from "@/types/database";
+import { Database } from "@/types/database";
 import { Provider } from "@/types";
 
+// Extragem tipul corect din structura Supabase
+type DbProvider = Database["public"]["Tables"]["providers"]["Row"];
+
 function mapDbProviderToProvider(db: DbProvider): Provider {
-  return {
-    id: db.id,
-    name: db.name,
-    cui: db.cui,
-    services: [],
-  };
+// ... restul codului ramane la fel
+  return { id: db.id, name: db.name, cui: db.cui, services: [] };
 }
 
 export async function fetchProviders(): Promise<Provider[]> {
+  const { data, error } = await supabase.from("providers").select("*").order("name");
+  if (error) throw error;
+  return (data || []).map(mapDbProviderToProvider);
+}
+
+// NOU: Funcție pentru Admin
+export async function createProvider(name: string, cui: string, email: string): Promise<Provider> {
   const { data, error } = await supabase
     .from("providers")
-    .select("*")
-    .order("name");
-
-  if (error) {
-    console.error("Error fetching providers:", error);
-    throw error;
-  }
-
-  return (data || []).map(mapDbProviderToProvider);
+    .insert([{ name, cui, email }])
+    .select()
+    .single();
+  if (error) throw error;
+  return mapDbProviderToProvider(data);
 }
 </file>
 

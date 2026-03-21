@@ -7,8 +7,16 @@ import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { Request, RequestStatus } from "@/types";
 import { useApp } from "@/context/AppContext";
 
-export function RequestList({ requests, title }: { requests: Request[], title?: string }) {
-  const { updateRequest, deleteRequest, notifySuccess, notifyError } = useApp();
+// 1. Am definit clar ce "Props" poate primi această componentă
+interface RequestListProps {
+  requests: Request[];
+  title?: string;
+  emptyMessage?: string;
+  onUpdateStatus?: (id: string, status: RequestStatus) => void;
+}
+
+export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: RequestListProps) {
+  const { updateRequest, deleteRequest } = useApp();
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [modalState, setModalState] = useState<{ type: 'detail' | 'edit' | 'delete' | null }>({ type: null });
 
@@ -22,7 +30,6 @@ export function RequestList({ requests, title }: { requests: Request[], title?: 
     setSelectedRequest(null);
   };
 
-  // Reparație Eroare onSave: Wrapp-uim funcția pentru a returna Promise<void>
   const handleSaveRequest = async (id: string, updates: Partial<Request>): Promise<void> => {
     await updateRequest(id, updates);
   };
@@ -31,28 +38,34 @@ export function RequestList({ requests, title }: { requests: Request[], title?: 
     <div className="space-y-4">
       {title && <h2 className="text-xl font-bold text-slate-800">{title} ({requests.length})</h2>}
       
-      <div className="flex flex-col gap-3">
-        <AnimatePresence mode="popLayout">
-          {requests.map((req, index) => (
-            <RequestCard
-              key={req.id}
-              request={req}
-              index={index}
-              onClick={() => handleAction(req, 'detail')}
-              // Reparație Eroare onStatusChange: Folosim tipuri explicite (id: string, status: RequestStatus)
-              // Notă: Dacă eroarea persistă, verifică Interfața RequestCardProps în RequestCard.tsx
-              onEdit={() => handleAction(req, 'edit')}
-              onDelete={() => handleAction(req, 'delete')}
-            />
-          ))}
-        </AnimatePresence>
-      </div>
+      {/* 2. Tratăm cazul în care lista este goală */}
+      {requests.length === 0 && emptyMessage ? (
+        <div className="p-8 text-center bg-white border border-slate-200 rounded-xl text-slate-500">
+          {emptyMessage}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <AnimatePresence mode="popLayout">
+            {requests.map((req, index) => (
+              <RequestCard
+                key={req.id}
+                request={req}
+                index={index}
+                onClick={() => handleAction(req, 'detail')}
+                onEdit={() => handleAction(req, 'edit')}
+                onDelete={() => handleAction(req, 'delete')}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
       <RequestDetailModal 
         isOpen={modalState.type === 'detail'} 
         request={selectedRequest} 
         onClose={closeModals}
-        onUpdateStatus={(id, status) => updateRequest(id, { status })}
+        // 3. Pasăm onUpdateStatus mai departe către modal
+        onUpdateStatus={onUpdateStatus}
       />
 
       <EditRequestModal 

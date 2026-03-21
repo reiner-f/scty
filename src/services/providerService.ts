@@ -1,26 +1,28 @@
 import { supabase } from "@/lib/supabase";
-import { DbProvider } from "@/types/database";
+import { Database } from "@/types/database";
 import { Provider } from "@/types";
 
+// Extragem tipul corect din structura Supabase
+type DbProvider = Database["public"]["Tables"]["providers"]["Row"];
+
 function mapDbProviderToProvider(db: DbProvider): Provider {
-  return {
-    id: db.id,
-    name: db.name,
-    cui: db.cui,
-    services: [],
-  };
+// ... restul codului ramane la fel
+  return { id: db.id, name: db.name, cui: db.cui, services: [] };
 }
 
 export async function fetchProviders(): Promise<Provider[]> {
+  const { data, error } = await supabase.from("providers").select("*").order("name");
+  if (error) throw error;
+  return (data || []).map(mapDbProviderToProvider);
+}
+
+// NOU: Funcție pentru Admin
+export async function createProvider(name: string, cui: string, email: string): Promise<Provider> {
   const { data, error } = await supabase
     .from("providers")
-    .select("*")
-    .order("name");
-
-  if (error) {
-    console.error("Error fetching providers:", error);
-    throw error;
-  }
-
-  return (data || []).map(mapDbProviderToProvider);
+    .insert([{ name, cui, email }])
+    .select()
+    .single();
+  if (error) throw error;
+  return mapDbProviderToProvider(data);
 }

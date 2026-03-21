@@ -1,4 +1,4 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import { motion } from "motion/react";
 import { Building, Calendar, Edit2, Trash2, ChevronRight } from "lucide-react";
 import { Request, RequestStatus } from "@/types";
@@ -11,18 +11,18 @@ interface RequestCardProps {
   onClick?: () => void;
   onEdit?: (request: Request) => void;
   onDelete?: (request: Request) => void;
-  // ADAUGAT: Această linie repară eroarea din RequestList
   onStatusChange?: (id: string, status: RequestStatus) => void;
 }
 
-export function RequestCard({ 
+// AICI ESTE REPARAȚIA: Am adăugat forwardRef
+export const RequestCard = forwardRef<HTMLDivElement, RequestCardProps>(({ 
   request, 
   index = 0, 
   onClick, 
   onEdit, 
   onDelete,
-  onStatusChange // ADAUGAT
-}: RequestCardProps) {
+  onStatusChange 
+}, ref) => {
   
   const statusBorder = {
     accepted: "border-l-emerald-400",
@@ -32,6 +32,7 @@ export function RequestCard({
 
   return (
     <motion.div
+      ref={ref} // Și am pasat ref-ul către Framer Motion
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -85,4 +86,7 @@ export function RequestCard({
       </div>
     </motion.div>
   );
-}
+});
+
+// Este o bună practică pentru componentele cu forwardRef
+RequestCard.displayName = "RequestCard";
