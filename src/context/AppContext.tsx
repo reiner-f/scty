@@ -43,7 +43,7 @@ export function AppProvider({ children, user, profile }: { children: ReactNode, 
   // Trimitem profilul în useRequests pentru a filtra datele pe bază de rol
   const requestsHook = useRequests(profile); 
   const notificationsHook = useNotifications();
-  const municipalityHook = useMunicipality();
+  const municipalityHook = useMunicipality(profile);
   const providersHook = useProviders();
   const servicesHook = useServices();
 

@@ -1,40 +1,58 @@
 import { useState, useEffect } from "react";
-import { Municipality } from "@/types";
-import { fetchMunicipality } from "@/services/municipalityService";
+import { Municipality, UserProfile } from "@/types";
+import { supabase } from "@/lib/supabase";
 
 const defaultMunicipality: Municipality = {
   id: "",
-  name: "Se încarcă...",
+  name: "Nu este asociat",
   cui: "",
-  contactPerson: {
-    name: "",
-    email: "",
-    phone: "",
-  },
+  contactPerson: { name: "", email: "", phone: "" },
   locality: "",
 };
 
-export function useMunicipality() {
+export function useMunicipality(profile: UserProfile | null) {
   const [municipality, setMunicipality] = useState<Municipality>(defaultMunicipality);
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     async function loadMunicipality() {
-      try {
-        const data = await fetchMunicipality();
-        if (data) {
-          setMunicipality(data);
+      // Căutăm datele DOAR dacă cel logat este o primărie
+      if (profile?.role === 'primarie' && profile.entityId) {
+        try {
+          setIsLoading(true);
+          const { data, error } = await supabase
+            .from('municipalities')
+            .select('*')
+            .eq('id', profile.entityId)
+            .single();
+            
+          if (data && !error) {
+            setMunicipality({
+              id: data.id,
+              name: data.name,
+              cui: data.cui,
+              contactPerson: {
+                name: data.contact_person,
+                email: data.email,
+                phone: data.phone,
+              },
+              locality: data.locality,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load municipality:", err);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (err) {
-        console.error("Failed to load municipality:", err);
-      } finally {
+      } else {
+        setMunicipality(defaultMunicipality);
         setIsLoading(false);
       }
     }
 
     loadMunicipality();
-  }, []);
+  }, [profile]);
 
   const openProfile = () => setIsProfileOpen(true);
   const closeProfile = () => setIsProfileOpen(false);

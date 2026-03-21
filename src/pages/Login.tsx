@@ -1,10 +1,20 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { Building2, Mail, Lock, LogIn, AlertCircle, Loader2 } from "lucide-react";
+import { 
+  Building2, Mail, Lock, LogIn, AlertCircle, 
+  ShieldCheck, Building, Briefcase 
+} from "lucide-react";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { authService } from "@/services/authService";
 import { useApp } from "@/context/AppContext";
+
+// ⚠️ AICI SETEZI CONTURILE DE TEST (Înlocuiește cu email-urile și parolele tale reale din Supabase)
+const DEMO_ACCOUNTS = {
+  admin: { email: "admin@centria.ro", password: "parola_admin_123" },
+  primarie: { email: "primarie@centria.ro", password: "parola123" },
+  furnizor: { email: "furnizor@centria.ro", password: "parola123" }
+};
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -13,18 +23,15 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const { notifySuccess } = useApp();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-    
+  // Am extras logica de logare într-o funcție separată pentru a o putea refolosi
+  const performLogin = async (loginEmail: string, loginPass: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await authService.login({ email, password });
+      await authService.login({ email: loginEmail, password: loginPass });
       notifySuccess("Bun venit în platforma Centria!");
     } catch (err: any) {
-      // Mesaje de eroare prietenoase pentru utilizator
       if (err.message.includes("Invalid login credentials")) {
         setError("Email-ul sau parola sunt incorecte.");
       } else {
@@ -33,6 +40,21 @@ export function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleManualLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+    performLogin(email, password);
+  };
+
+  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNTS) => {
+    const acc = DEMO_ACCOUNTS[role];
+    // Setăm vizual datele în input-uri (opțional, dar dă un feedback vizual bun)
+    setEmail(acc.email);
+    setPassword(acc.password);
+    // Declansăm logarea direct cu datele alese
+    performLogin(acc.email, acc.password);
   };
 
   return (
@@ -53,7 +75,8 @@ export function Login() {
               <p className="text-slate-500 font-medium">Administrație Publică Inteligentă</p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-5">
+            {/* Formularul Clasic */}
+            <form onSubmit={handleManualLogin} className="space-y-5">
               {error && (
                 <motion.div 
                   initial={{ opacity: 0, y: -10 }}
@@ -87,11 +110,6 @@ export function Login() {
                   leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
                   required
                 />
-                <div className="flex justify-end">
-                  <button type="button" className="text-xs font-semibold text-primary-600 hover:text-primary-700">
-                    Ai uitat parola?
-                  </button>
-                </div>
               </div>
 
               <Button
@@ -104,12 +122,52 @@ export function Login() {
                 {isLoading ? "Se verifică..." : "Intră în cont"}
               </Button>
             </form>
-          </div>
-          
-          <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex flex-col items-center gap-1">
-            <p className="text-xs text-slate-400 text-center">
-              Sistem securizat. Accesul neautorizat este monitorizat.
-            </p>
+
+            {/* Secțiunea de Conturi Demo (Quick Login) */}
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-4">
+                Testează platforma (Conturi Demo)
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handleQuickLogin("admin")}
+                  className="flex flex-col gap-1 py-3 h-auto"
+                >
+                  <ShieldCheck className="w-5 h-5 text-purple-600" />
+                  <span className="text-xs">Admin</span>
+                </Button>
+                
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handleQuickLogin("primarie")}
+                  className="flex flex-col gap-1 py-3 h-auto"
+                >
+                  <Building className="w-5 h-5 text-sky-600" />
+                  <span className="text-xs">Primărie</span>
+                </Button>
+
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handleQuickLogin("furnizor")}
+                  className="flex flex-col gap-1 py-3 h-auto"
+                >
+                  <Briefcase className="w-5 h-5 text-emerald-600" />
+                  <span className="text-xs">Furnizor</span>
+                </Button>
+              </div>
+            </div>
+
           </div>
         </div>
       </motion.div>

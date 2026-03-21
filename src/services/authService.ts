@@ -15,7 +15,7 @@ export const authService = {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
-
+  
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     console.log("-> [AuthService] Cerem profilul pentru ID-ul:", userId);
 
@@ -59,16 +59,25 @@ export const authService = {
       return null;
     }
   },
+
   async getSession() {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session) return null;
 
-    // AICI E MODIFICAREA: Folosim 'authService' în loc de 'this'
+    // Folosim 'authService' în loc de 'this'
     const profile = await authService.getUserProfile(session.user.id);
 
     return {
       ...session,
       profile,
     };
+  }, // <--- AICI AM ADĂUGAT VIRGULA LIPSĂ!
+
+  // NOU: Schimbarea propriei parole
+  async changeMyPassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    if (error) throw error;
   }
 };
