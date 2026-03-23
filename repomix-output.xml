@@ -1952,109 +1952,6 @@ export function SearchBar({
 }
 </file>
 
-<file path="src/components/common/Select.tsx">
-import React, { SelectHTMLAttributes, forwardRef, useId } from "react";
-import { ChevronDown } from "lucide-react";
-import { classNames } from "@/utils/helpers";
-
-export interface SelectOption {
-  value: string;
-  label: string;
-}
-
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-  options: SelectOption[];
-  placeholder?: string;
-}
-
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, options, placeholder, className, id, disabled, ...props }, ref) => {
-    // Generăm ID-uri sigure pentru React (SSR & Accesibilitate)
-    const reactId = useId();
-    const selectId = id || reactId;
-    const helperId = `${selectId}-helper`;
-    const errorId = `${selectId}-error`;
-
-    return (
-      <div className="w-full flex flex-col gap-1.5">
-        {label && (
-          <label
-            htmlFor={selectId}
-            className={classNames(
-              "text-sm font-medium text-slate-700",
-              disabled && "opacity-50"
-            )}
-          >
-            {label}
-          </label>
-        )}
-        
-        <div className="relative flex items-center">
-          <select
-            ref={ref}
-            id={selectId}
-            disabled={disabled}
-            // Accesibilitate vitală
-            aria-invalid={!!error}
-            aria-describedby={error ? errorId : helperText ? helperId : undefined}
-            className={classNames(
-              // Baza: Dimensiuni consistente cu componenta Input, ascundem designul nativ
-              "w-full appearance-none rounded-lg border bg-white pl-3 pr-10 py-2.5 transition-all duration-200",
-              // text-base previne zoom-ul forțat pe iOS Safari când se deschide meniul
-              "text-base md:text-sm text-slate-900",
-              // Focus modern: outline fin + ring translucid
-              "focus:outline-none focus:ring-4",
-              // Starea de "Disabled"
-              "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-100",
-              // Stări dinamice (Eroare vs Normal)
-              error
-                ? "border-status-rejected focus:border-status-rejected focus:ring-status-rejected/20"
-                : "border-slate-200 hover:border-slate-300 focus:border-baby-blue focus:ring-baby-blue/20",
-              className
-            )}
-            // Dacă ai placeholder, asigură-te că valoarea implicită e un string gol
-            defaultValue={placeholder ? "" : undefined}
-            {...props}
-          >
-            {placeholder && (
-              <option value="" disabled className="text-slate-500">
-                {placeholder}
-              </option>
-            )}
-            {options.map((option) => (
-              <option key={option.value} value={option.value} className="text-slate-900">
-                {option.label}
-              </option>
-            ))} {/* <--- Aici e reparația, am închis paranteza de la map */}
-          </select>
-          
-          {/* Săgeata Custom */}
-          <div className="absolute right-3 flex items-center justify-center pointer-events-none text-slate-400">
-            <ChevronDown className={classNames("w-5 h-5", disabled && "opacity-50")} />
-          </div>
-        </div>
-
-        {/* Zona de mesaje */}
-        {error ? (
-          <p id={errorId} className="text-sm text-status-rejected font-medium">
-            {error}
-          </p>
-        ) : helperText ? (
-          <p id={helperId} className="text-sm text-slate-500">
-            {helperText}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-);
-
-Select.displayName = "Select";
-</file>
-
 <file path="src/components/common/Textarea.tsx">
 import React, { TextareaHTMLAttributes, forwardRef, useId } from "react";
 import { classNames } from "@/utils/helpers";
@@ -2358,110 +2255,6 @@ export function Layout({ children }: LayoutProps) {
       <div className="relative z-10 mt-auto">
         <Footer />
       </div>
-    </div>
-  );
-}
-</file>
-
-<file path="src/components/notifications/NotificationContainer.tsx">
-import React from "react";
-import { motion, AnimatePresence } from "motion/react";
-// Am schimbat CheckCircle cu CheckCircle2 pentru un aspect puțin mai subțire și modern
-import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react"; 
-import { useApp } from "@/context/AppContext";
-import { Notification } from "@/types";
-import { classNames } from "@/utils/helpers";
-
-const iconMap = {
-  success: CheckCircle2,
-  error: XCircle,
-  warning: AlertCircle,
-  info: Info,
-};
-
-// Culori mai rafinate, cu borduri translucide pentru un efect subtil
-const styleMap = {
-  success: "bg-emerald-50 border-emerald-200/60 text-emerald-800",
-  error: "bg-rose-50 border-rose-200/60 text-rose-800",
-  warning: "bg-amber-50 border-amber-200/60 text-amber-800",
-  info: "bg-blue-50 border-blue-200/60 text-blue-800",
-};
-
-const iconColorMap = {
-  success: "text-emerald-500",
-  error: "text-rose-500",
-  warning: "text-amber-500",
-  info: "text-blue-500",
-};
-
-function NotificationItem({
-  notification,
-  onRemove,
-}: {
-  notification: Notification;
-  onRemove: (id: string) => void;
-}) {
-  const Icon = iconMap[notification.type];
-
-  return (
-    <motion.div
-      // Prop-ul MAGIC: Animație fluidă când o notificare este ștearsă iar celelalte se rearanjează
-      layout 
-      // Animație Apple-like: Apare de sus, cu un blur subtil
-      initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(4px)" }}
-      animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-      exit={{ opacity: 0, scale: 0.85, filter: "blur(2px)", transition: { duration: 0.2 } }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      
-      // Accesibilitate vitală
-      role="alert"
-      aria-live="assertive"
-      
-      className={classNames(
-        // Reactivăm pointer-events doar pentru notificare, nu pentru tot ecranul
-        "pointer-events-auto flex items-start gap-3 w-full p-4 rounded-2xl border shadow-xl shadow-slate-200/50 backdrop-blur-sm",
-        styleMap[notification.type]
-      )}
-    >
-      {/* Iconița sus (în caz că textul e lung și se întinde pe 2 rânduri) */}
-      <Icon className={classNames("w-5 h-5 flex-shrink-0 mt-0.5", iconColorMap[notification.type])} />
-      
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium leading-relaxed">
-          {notification.message}
-        </p>
-      </div>
-
-      <button
-        onClick={() => onRemove(notification.id)}
-        aria-label="Închide notificarea"
-        className="flex-shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-lg opacity-50 hover:opacity-100 hover:bg-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </motion.div>
-  );
-}
-
-export function NotificationContainer() {
-  const { notifications, removeNotification } = useApp();
-
-  return (
-    <div 
-      // pointer-events-none e CRITIC aici. Permite utilizatorului să dea click "prin" acest container
-      // z-[150] asigură că va sta peste orice modal posibil
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center gap-3 w-full max-w-sm px-4 pointer-events-none"
-    >
-      {/* mode="popLayout" previne salturile bruște în DOM când un element iese din scenă */}
-      <AnimatePresence mode="popLayout">
-        {notifications.map((notification) => (
-          <NotificationItem
-            key={notification.id}
-            notification={notification}
-            onRemove={removeNotification}
-          />
-        ))}
-      </AnimatePresence>
     </div>
   );
 }
@@ -4087,6 +3880,217 @@ pnpm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+</file>
+
+<file path="src/components/common/Select.tsx">
+import React, { SelectHTMLAttributes, forwardRef, useId } from "react";
+import { ChevronDown } from "lucide-react";
+import { classNames } from "@/utils/helpers";
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+  options: SelectOption[];
+  placeholder?: string;
+}
+
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ label, error, helperText, options, placeholder, className, id, disabled, value, defaultValue, ...props }, ref) => {
+    // Generăm ID-uri sigure pentru React
+    const reactId = useId();
+    const selectId = id || reactId;
+    const helperId = `${selectId}-helper`;
+    const errorId = `${selectId}-error`;
+
+    // REPARAT: Determinăm dacă componenta este controlată (folosește value) sau necontrolată
+    const isControlled = value !== undefined;
+    
+    // Setăm valoarea implicită corectă pentru a evita warning-ul de "uncontrolled vs controlled"
+    const resolvedValue = isControlled ? (value || "") : undefined;
+    const resolvedDefault = !isControlled ? (defaultValue || (placeholder ? "" : undefined)) : undefined;
+
+    return (
+      <div className="w-full flex flex-col gap-1.5">
+        {label && (
+          <label
+            htmlFor={selectId}
+            className={classNames(
+              "text-sm font-medium text-slate-700",
+              disabled && "opacity-50"
+            )}
+          >
+            {label}
+          </label>
+        )}
+        
+        <div className="relative flex items-center">
+          <select
+            ref={ref}
+            id={selectId}
+            disabled={disabled}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={classNames(
+              "w-full appearance-none rounded-lg border bg-white pl-3 pr-10 py-2.5 transition-all duration-200",
+              "text-base md:text-sm text-slate-900",
+              "focus:outline-none focus:ring-4",
+              "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-100",
+              error
+                ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/20"
+                : "border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:ring-sky-500/20",
+              className
+            )}
+            value={resolvedValue}
+            defaultValue={resolvedDefault}
+            {...props}
+          >
+            {placeholder && (
+              <option value="" disabled className="text-slate-500">
+                {placeholder}
+              </option>
+            )}
+            {options.map((option) => (
+              <option key={option.value} value={option.value} className="text-slate-900">
+                {option.label}
+              </option>
+            ))}
+          </select>
+          
+          <div className="absolute right-3 flex items-center justify-center pointer-events-none text-slate-400">
+            <ChevronDown className={classNames("w-5 h-5", disabled && "opacity-50")} />
+          </div>
+        </div>
+
+        {error ? (
+          <p id={errorId} className="text-sm text-rose-500 font-medium">
+            {error}
+          </p>
+        ) : helperText ? (
+          <p id={helperId} className="text-sm text-slate-500">
+            {helperText}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+);
+
+Select.displayName = "Select";
+</file>
+
+<file path="src/components/notifications/NotificationContainer.tsx">
+import React, { forwardRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react"; 
+import { useApp } from "@/context/AppContext";
+import { Notification } from "@/types";
+import { classNames } from "@/utils/helpers";
+
+const iconMap = {
+  success: CheckCircle2,
+  error: XCircle,
+  warning: AlertCircle,
+  info: Info,
+};
+
+// Culori mai rafinate, cu borduri translucide pentru un efect subtil
+const styleMap = {
+  success: "bg-emerald-50 border-emerald-200/60 text-emerald-800",
+  error: "bg-rose-50 border-rose-200/60 text-rose-800",
+  warning: "bg-amber-50 border-amber-200/60 text-amber-800",
+  info: "bg-blue-50 border-blue-200/60 text-blue-800",
+};
+
+const iconColorMap = {
+  success: "text-emerald-500",
+  error: "text-rose-500",
+  warning: "text-amber-500",
+  info: "text-blue-500",
+};
+
+interface NotificationItemProps {
+  notification: Notification;
+  onRemove: (id: string) => void;
+}
+
+// REPARAT: Am folosit forwardRef pentru ca Framer Motion să poată anima componenta la ieșire (exit)
+const NotificationItem = forwardRef<HTMLDivElement, NotificationItemProps>(
+  ({ notification, onRemove }, ref) => {
+    const Icon = iconMap[notification.type];
+
+    return (
+      <motion.div
+        ref={ref} // Aici trimitem ref-ul către Framer Motion
+        // Prop-ul MAGIC: Animație fluidă când o notificare este ștearsă iar celelalte se rearanjează
+        layout 
+        // Animație Apple-like: Apare de sus, cu un blur subtil
+        initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.85, filter: "blur(2px)", transition: { duration: 0.2 } }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        
+        // Accesibilitate vitală
+        role="alert"
+        aria-live="assertive"
+        
+        className={classNames(
+          // Reactivăm pointer-events doar pentru notificare, nu pentru tot ecranul
+          "pointer-events-auto flex items-start gap-3 w-full p-4 rounded-2xl border shadow-xl shadow-slate-200/50 backdrop-blur-sm",
+          styleMap[notification.type]
+        )}
+      >
+        {/* Iconița sus (în caz că textul e lung și se întinde pe 2 rânduri) */}
+        <Icon className={classNames("w-5 h-5 flex-shrink-0 mt-0.5", iconColorMap[notification.type])} />
+        
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium leading-relaxed">
+            {notification.message}
+          </p>
+        </div>
+
+        <button
+          onClick={() => onRemove(notification.id)}
+          aria-label="Închide notificarea"
+          className="flex-shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-lg opacity-50 hover:opacity-100 hover:bg-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </motion.div>
+    );
+  }
+);
+
+// Nume de afișare necesar când folosim forwardRef (ajută la debugging)
+NotificationItem.displayName = "NotificationItem";
+
+export function NotificationContainer() {
+  const { notifications, removeNotification } = useApp();
+
+  return (
+    <div 
+      // pointer-events-none e CRITIC aici. Permite utilizatorului să dea click "prin" acest container
+      // z-[150] asigură că va sta peste orice modal posibil
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center gap-3 w-full max-w-sm px-4 pointer-events-none"
+    >
+      {/* mode="popLayout" previne salturile bruște în DOM când un element iese din scenă */}
+      <AnimatePresence mode="popLayout">
+        {notifications.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            onRemove={removeNotification}
+          />
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
 </file>
 
 <file path="src/components/profile/ProfileModal.tsx">
@@ -5943,90 +5947,6 @@ export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: R
 }
 </file>
 
-<file path="src/context/AppContext.tsx">
-import { createContext, useContext, ReactNode } from "react";
-import { useRequests } from "@/hooks/useRequests";
-import { useNotifications } from "@/hooks/useNotifications";
-import { useMunicipality } from "@/hooks/useMunicipality";
-import { useProviders } from "@/hooks/useProviders";
-import { useServices } from "@/hooks/useServices";
-import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service, UserProfile } from "@/types";
-
-interface AppContextType {
-  user: any;
-  profile: UserProfile | null;
-  requests: Request[];
-  filteredRequests: Request[];
-  filters: FilterOptions;
-  stats: DashboardStats;
-  isLoadingRequests: boolean;
-  addRequest: (request: Omit<Request, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: string; updatedAt?: string }) => Promise<Request>;
-  updateRequest: (id: string, updates: Partial<Request>) => Promise<Request>;
-  deleteRequest: (id: string) => Promise<void>;
-  setFilter: <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => void;
-  clearFilters: () => void;
-  refreshRequests: () => Promise<void>;
-  notifications: Notification[];
-  notifySuccess: (message: string) => void;
-  notifyError: (message: string) => void;
-  notifyInfo: (message: string) => void;
-  notifyWarning: (message: string) => void;
-  removeNotification: (id: string) => void;
-  municipality: Municipality;
-  isProfileOpen: boolean;
-  openProfile: () => void;
-  closeProfile: () => void;
-  toggleProfile: () => void;
-  providers: Provider[];
-  services: Service[];
-  isLoadingProviders: boolean;
-  isLoadingServices: boolean;
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
-export function AppProvider({ children, user, profile }: { children: ReactNode, user: any, profile: UserProfile | null }) {
-  // Trimitem profilul în useRequests pentru a filtra datele pe bază de rol
-  const requestsHook = useRequests(profile); 
-  const notificationsHook = useNotifications();
-  const municipalityHook = useMunicipality(profile);
-  const providersHook = useProviders();
-  const servicesHook = useServices();
-
-  const value: AppContextType = {
-    user,
-    profile,
-    requests: requestsHook.requests,
-    filteredRequests: requestsHook.filteredRequests,
-    filters: requestsHook.filters,
-    stats: requestsHook.stats,
-    isLoadingRequests: requestsHook.isLoading,
-    addRequest: requestsHook.addRequest,
-    updateRequest: requestsHook.updateRequest,
-    deleteRequest: requestsHook.deleteRequest,
-    setFilter: requestsHook.setFilter,
-    clearFilters: requestsHook.clearFilters,
-    refreshRequests: requestsHook.refreshRequests,
-    ...notificationsHook,
-    ...municipalityHook,
-    providers: providersHook.providers,
-    services: servicesHook.services,
-    isLoadingProviders: providersHook.isLoading,
-    isLoadingServices: servicesHook.isLoading,
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
-
-export function useApp(): AppContextType {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error("useApp must be used within an AppProvider");
-  }
-  return context;
-}
-</file>
-
 <file path="src/hooks/useRequests.ts">
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { Request, FilterOptions, DashboardStats, UserProfile } from "@/types";
@@ -6384,183 +6304,122 @@ export const adminService = {
 };
 </file>
 
-<file path="src/services/requestService.ts">
+<file path="src/context/AppContext.tsx">
+import { createContext, useContext, ReactNode, useEffect } from "react";
+import { useRequests } from "@/hooks/useRequests";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useMunicipality } from "@/hooks/useMunicipality";
+import { useProviders } from "@/hooks/useProviders";
+import { useServices } from "@/hooks/useServices";
+import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service, UserProfile } from "@/types";
 import { supabase } from "@/lib/supabase";
-import { Request, RequestStatus, UserProfile } from "@/types";
 
-// Mapare inteligentă a datelor relaționale
-function mapDbRequestToRequest(dbRequest: any): Request {
-  return {
-    id: dbRequest.id,
-    title: dbRequest.title,
-    description: dbRequest.description || "",
-    status: dbRequest.status as RequestStatus,
-    municipalityId: dbRequest.municipality_id || "",
-    // Luăm numele din JOIN, dacă există, altfel fallback
-    municipality: dbRequest.municipality || { name: "Necunoscut", cui: "-", locality: dbRequest.locality },
-    contactPerson: {
-      name: dbRequest.contact_person,
-      email: dbRequest.contact_email,
-      phone: dbRequest.contact_phone,
-    },
-    locality: dbRequest.locality,
-    serviceId: dbRequest.service_id || "",
-    service: dbRequest.service || { name: "Serviciu Necunoscut" },
-    providerId: dbRequest.provider_id || "",
-    provider: dbRequest.provider || { name: "Furnizor Necunoscut", cui: "-" },
-    createdAt: dbRequest.created_at || new Date().toISOString(),
-    estimatedStartDate: dbRequest.estimated_start_date || undefined,
-    updatedAt: dbRequest.updated_at || new Date().toISOString(),
-  };
-}
-
-export const requestService = {
-  async fetchAll(profile: UserProfile | null): Promise<Request[]> {
-    // ⚠️ REPARAT: Folosim JOIN-uri native Supabase pentru a evita denormalizarea
-    let query = supabase
-      .from("requests")
-      .select(`
-        *,
-        municipality:municipalities(name, cui, locality),
-        provider:providers(name, cui),
-        service:services(name)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (profile?.role === "primarie" && profile.entityId) {
-      query = query.eq("municipality_id", profile.entityId);
-    } else if (profile?.role === "furnizor" && profile.entityId) {
-      query = query.eq("provider_id", profile.entityId);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []).map(mapDbRequestToRequest);
-  },
-
-  async create(request: Omit<Request, "id" | "createdAt" | "updatedAt">): Promise<Request> {
-    // ⚠️ REPARAT: Trimitem strict ID-urile, nu și numele (baza de date face restul)
-    const dbPayload = {
-      title: request.title,
-      description: request.description,
-      status: request.status,
-      municipality_id: request.municipalityId,
-      contact_person: request.contactPerson.name,
-      contact_email: request.contactPerson.email,
-      contact_phone: request.contactPerson.phone,
-      locality: request.locality,
-      service_id: request.serviceId,
-      provider_id: request.providerId,
-      estimated_start_date: request.estimatedStartDate || null,
-    };
-
-    const { data, error } = await supabase.from("requests").insert([dbPayload]).select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)').single();
-    if (error) throw error;
-    return mapDbRequestToRequest(data);
-  },
-
-  async update(id: string, updates: Partial<Request>): Promise<Request> {
-    const dbUpdates: any = { updated_at: new Date().toISOString() };
-    if (updates.status) dbUpdates.status = updates.status;
-    if (updates.title) dbUpdates.title = updates.title;
-    if (updates.description) dbUpdates.description = updates.description;
-    if (updates.estimatedStartDate !== undefined) dbUpdates.estimated_start_date = updates.estimatedStartDate;
-
-    const { data, error } = await supabase.from("requests").update(dbUpdates).eq("id", id).select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)').single();
-    if (error) throw error;
-    return mapDbRequestToRequest(data);
-  },
-
-  async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("requests").delete().eq("id", id);
-    if (error) throw error;
-  }
-};
-</file>
-
-<file path="src/types/index.ts">
-export type RequestStatus = "accepted" | "rejected" | "pending";
-
-export interface Municipality {
-  id: string;
-  name: string;
-  cui: string;
-  contactPerson: { name: string; email: string; phone: string; };
-  locality: string;
-}
-
-export interface Provider {
-  id: string;
-  name: string;
-  cui: string;
-  services: string[];
-}
-
-export interface Service {
-  id: string;
-  name: string;
-  description: string;
-}
-
-// ⚠️ REPARAT: Am transformat câmpurile duplicate în Relații (JOIN-uri)
-export interface Request {
-  id: string;
-  title: string;
-  description: string;
-  status: RequestStatus;
-  municipalityId: string;
-  municipality?: { name: string; cui: string; locality: string }; // Date aduse prin JOIN
-  contactPerson: { name: string; email: string; phone: string; };
-  locality: string;
-  serviceId: string;
-  service?: { name: string }; // Date aduse prin JOIN
-  providerId: string;
-  provider?: { name: string; cui: string }; // Date aduse prin JOIN
-  createdAt: string;
-  estimatedStartDate?: string;
-  updatedAt: string;
-}
-
-export interface Notification {
-  id: string;
-  type: "success" | "error" | "info" | "warning";
-  message: string;
-  timestamp: number;
-}
-
-export interface DashboardStats {
-  total: number;
-  accepted: number;
-  rejected: number;
-  pending: number;
-}
-
-export interface FilterOptions {
-  status?: RequestStatus | "all";
-  providerId?: string;
-  serviceId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  searchQuery?: string;
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export type AppRole = "admin" | "primarie" | "furnizor";
-
-export interface UserProfile {
-  id: string;
-  role: AppRole;
-  entityId: string | null;
-}
-
-export interface UserSession {
+interface AppContextType {
   user: any;
   profile: UserProfile | null;
-  access_token: string;
+  requests: Request[];
+  filteredRequests: Request[];
+  filters: FilterOptions;
+  stats: DashboardStats;
+  isLoadingRequests: boolean;
+  addRequest: (request: Omit<Request, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: string; updatedAt?: string }) => Promise<Request>;
+  updateRequest: (id: string, updates: Partial<Request>) => Promise<Request>;
+  deleteRequest: (id: string) => Promise<void>;
+  setFilter: <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => void;
+  clearFilters: () => void;
+  refreshRequests: () => Promise<void>;
+  notifications: Notification[];
+  notifySuccess: (message: string) => void;
+  notifyError: (message: string) => void;
+  notifyInfo: (message: string) => void;
+  notifyWarning: (message: string) => void;
+  removeNotification: (id: string) => void;
+  municipality: Municipality;
+  isProfileOpen: boolean;
+  openProfile: () => void;
+  closeProfile: () => void;
+  toggleProfile: () => void;
+  providers: Provider[];
+  services: Service[];
+  isLoadingProviders: boolean;
+  isLoadingServices: boolean;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function AppProvider({ children, user, profile }: { children: ReactNode, user: any, profile: UserProfile | null }) {
+  // Aducem toate hook-urile externe
+  const requestsHook = useRequests(profile);
+  const notificationsHook = useNotifications();
+  const municipalityHook = useMunicipality(profile);
+  const providersHook = useProviders();
+  const servicesHook = useServices();
+
+  // Extragem exact funcțiile de care avem nevoie pentru Realtime
+  const { refreshRequests } = requestsHook;
+  const { notifySuccess } = notificationsHook;
+
+  // NOU: ASCULTĂM MODIFICĂRILE ÎN TIMP REAL
+  useEffect(() => {
+    // Dacă utilizatorul nu este logat, nu deschidem nicio conexiune WebSocket
+    if (!profile) return; 
+
+    const requestChannel = supabase
+      .channel('cereri-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests' },
+        (payload) => {
+          console.log('🔄 Sincronizare Live Detectată:', payload);
+          
+          // Orice schimbare are loc în BD, îi spunem aplicației să descarce noile date silențios
+          refreshRequests(); 
+          
+          // Bonus: Dacă s-a introdus o cerere NOUĂ și utilizatorul curent este Furnizor
+          if (payload.eventType === 'INSERT' && profile.role === 'furnizor') {
+            notifySuccess("Ai primit o cerere nouă!");
+          }
+        }
+      )
+      .subscribe();
+
+    // Când utilizatorul închide pagina sau se deloghează, tăiem firul (cleanup)
+    return () => {
+      supabase.removeChannel(requestChannel);
+    };
+  }, [profile, refreshRequests, notifySuccess]);
+
+  const value: AppContextType = {
+    user,
+    profile,
+    requests: requestsHook.requests,
+    filteredRequests: requestsHook.filteredRequests,
+    filters: requestsHook.filters,
+    stats: requestsHook.stats,
+    isLoadingRequests: requestsHook.isLoading,
+    addRequest: requestsHook.addRequest,
+    updateRequest: requestsHook.updateRequest,
+    deleteRequest: requestsHook.deleteRequest,
+    setFilter: requestsHook.setFilter,
+    clearFilters: requestsHook.clearFilters,
+    refreshRequests: requestsHook.refreshRequests,
+    ...notificationsHook,
+    ...municipalityHook,
+    providers: providersHook.providers,
+    services: servicesHook.services,
+    isLoadingProviders: providersHook.isLoading,
+    isLoadingServices: servicesHook.isLoading,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+export function useApp(): AppContextType {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error("useApp must be used within an AppProvider");
+  }
+  return context;
 }
 </file>
 
@@ -6741,6 +6600,207 @@ export const authService = {
     if (error) throw error;
   }
 };
+</file>
+
+<file path="src/services/requestService.ts">
+import { supabase } from "@/lib/supabase";
+import { Request, RequestStatus, UserProfile } from "@/types";
+
+function mapDbRequestToRequest(dbRequest: any): Request {
+  return {
+    id: dbRequest.id,
+    title: dbRequest.title,
+    description: dbRequest.description || "",
+    status: dbRequest.status as RequestStatus,
+    municipalityId: dbRequest.municipality_id || "",
+    municipality: dbRequest.municipality || { name: "Necunoscut", cui: "-", locality: dbRequest.locality },
+    contactPerson: {
+      name: dbRequest.contact_person || "",
+      email: dbRequest.contact_email || "",
+      phone: dbRequest.contact_phone || "",
+    },
+    locality: dbRequest.locality || "",
+    serviceId: dbRequest.service_id || "",
+    service: dbRequest.service || { name: "Serviciu Necunoscut" },
+    providerId: dbRequest.provider_id || "",
+    provider: dbRequest.provider || { name: "Furnizor Necunoscut", cui: "-" },
+    createdAt: dbRequest.created_at || new Date().toISOString(),
+    estimatedStartDate: dbRequest.estimated_start_date || undefined,
+    updatedAt: dbRequest.updated_at || new Date().toISOString(),
+  };
+}
+
+export const requestService = {
+  async fetchAll(profile: UserProfile | null): Promise<Request[]> {
+    let query = supabase
+      .from("requests")
+      .select(`*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)`)
+      .order("created_at", { ascending: false });
+
+    if (profile?.role === "primarie" && profile.entityId) {
+      query = query.eq("municipality_id", profile.entityId);
+    } else if (profile?.role === "furnizor" && profile.entityId) {
+      query = query.eq("provider_id", profile.entityId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("❌ EROARE FETCH CERERI:", error);
+      throw error;
+    }
+    return (data || []).map(mapDbRequestToRequest);
+  },
+
+  async create(request: Omit<Request, "id" | "createdAt" | "updatedAt">): Promise<Request> {
+    // REPARAT: Ne asigurăm că string-urile goale ("") devin `null` pentru coloanele care sunt chei străine (UUID)
+    const dbPayload = {
+      title: request.title,
+      description: request.description,
+      status: request.status,
+      municipality_id: request.municipalityId || null,
+      contact_person: request.contactPerson.name,
+      contact_email: request.contactPerson.email,
+      contact_phone: request.contactPerson.phone,
+      locality: request.locality,
+      // Dacă e string gol sau "none", trimitem null ca să nu crape baza de date
+      service_id: (request.serviceId && request.serviceId !== "none") ? request.serviceId : null,
+      provider_id: (request.providerId && request.providerId !== "none") ? request.providerId : null,
+      estimated_start_date: request.estimatedStartDate || null,
+    };
+
+    console.log("Trimitem către Supabase:", dbPayload);
+
+    const { data, error } = await supabase
+      .from("requests")
+      .insert([dbPayload])
+      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
+      .single();
+      
+    if (error) {
+      // Acum vom vedea exact DE CE crapă baza de date direct în consola browserului
+      console.error("❌ EROARE CRITICĂ LA CREAREA CERERII:", error);
+      throw error;
+    }
+    
+    return mapDbRequestToRequest(data);
+  },
+
+  async update(id: string, updates: Partial<Request>): Promise<Request> {
+    const dbUpdates: any = { updated_at: new Date().toISOString() };
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.title) dbUpdates.title = updates.title;
+    if (updates.description) dbUpdates.description = updates.description;
+    if (updates.estimatedStartDate !== undefined) dbUpdates.estimated_start_date = updates.estimatedStartDate;
+
+    const { data, error } = await supabase
+      .from("requests")
+      .update(dbUpdates)
+      .eq("id", id)
+      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
+      .single();
+      
+    if (error) {
+      console.error("❌ EROARE LA UPDATE:", error);
+      throw error;
+    }
+    return mapDbRequestToRequest(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from("requests").delete().eq("id", id);
+    if (error) {
+      console.error("❌ EROARE LA ȘTERGERE:", error);
+      throw error;
+    }
+  }
+};
+</file>
+
+<file path="src/types/index.ts">
+export type RequestStatus = "accepted" | "rejected" | "pending";
+
+export interface Municipality {
+  id: string;
+  name: string;
+  cui: string;
+  contactPerson: { name: string; email: string; phone: string; };
+  locality: string;
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  cui: string;
+  services: string[];
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+}
+
+// Adaugă documentUrl în interfața Request
+export interface Request {
+  id: string;
+  title: string;
+  description: string;
+  status: RequestStatus;
+  municipalityId: string;
+  municipality?: { name: string; cui: string; locality: string };
+  contactPerson: { name: string; email: string; phone: string; };
+  locality: string;
+  serviceId: string;
+  service?: { name: string };
+  providerId: string;
+  provider?: { name: string; cui: string };
+  createdAt: string;
+  estimatedStartDate?: string;
+  updatedAt: string;
+  documentUrl?: string; // <--- NOU: Adăugat pentru fișiere
+}
+
+export interface Notification {
+  id: string;
+  type: "success" | "error" | "info" | "warning";
+  message: string;
+  timestamp: number;
+}
+
+export interface DashboardStats {
+  total: number;
+  accepted: number;
+  rejected: number;
+  pending: number;
+}
+
+export interface FilterOptions {
+  status?: RequestStatus | "all";
+  providerId?: string;
+  serviceId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  searchQuery?: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export type AppRole = "admin" | "primarie" | "furnizor";
+
+export interface UserProfile {
+  id: string;
+  role: AppRole;
+  entityId: string | null;
+}
+
+export interface UserSession {
+  user: any;
+  profile: UserProfile | null;
+  access_token: string;
+}
 </file>
 
 <file path="src/repomix-output.xml">
