@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase";
 import { AppRole } from "@/types";
-import { createClient } from "@supabase/supabase-js";
 
 export interface AdminUserView {
   id: string;
@@ -9,12 +8,6 @@ export interface AdminUserView {
   role: AppRole | null;
   entityId: string | null;
 }
-
-const supabaseAdmin = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
 
 export const adminService = {
   async getAllUsers(): Promise<AdminUserView[]> {
@@ -38,7 +31,6 @@ export const adminService = {
 
   async updateUserMapping(id: string, role: AppRole | null, entityId: string | null) {
     if (!role) {
-      // Dacă scoatem rolul, ștergem profilul complet
       const { error } = await supabase.from("user_profiles").delete().eq("id", id);
       if (error) throw error;
       return null;
@@ -54,31 +46,36 @@ export const adminService = {
     return data;
   },
 
+  // ⚠️ REPARAT: Folosim funcția RPC atomică! Niciun "client fantomă" nu mai este posibil.
   async createUserAccountAndMap(email: string, password: string, role: AppRole, entityId: string) {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signUp({
-      email,
-      password,
+    const { data: newUserId, error } = await supabase.rpc('admin_create_user_and_profile', {
+      p_email: email,
+      p_password: password,
+      p_role: role,
+      p_entity_id: entityId
     });
 
-    if (authError) throw authError;
-    if (!authData.user) throw new Error("Crearea utilizatorului a eșuat. Verifică parola.");
+    if (error) {
+      console.error("Eroare la crearea contului în tranzacție:", error);
+      throw new Error("Nu s-a putut crea contul de utilizator.");
+    }
 
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .upsert({ id: authData.user.id, role: role, entity_id: entityId });
-
-    if (profileError) throw profileError;
-    return authData.user;
+    return newUserId;
   },
 
-  // NOU: Ștergerea unui utilizator folosind funcția RPC cu drepturi depline
   async deleteUser(id: string) {
-    // Apelăm Super-Funcția creată în SQL Editor
     const { error } = await supabase.rpc('delete_user_and_auth', { target_user_id: id });
-    
     if (error) {
       console.error("Eroare severă la ștergerea contului:", error);
       throw error;
     }
+  },
+
+  async changeUserPassword(userId: string, newPassword: string) {
+    const { error } = await supabase.rpc('admin_change_user_password', { 
+      target_user_id: userId,
+      new_password: newPassword
+    });
+    if (error) throw error;
   }
 };

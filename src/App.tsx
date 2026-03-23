@@ -15,79 +15,53 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState("Se conectează la baza de date...");
 
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      if (!mounted) return;
-      
+    // 1. O singură funcție sigură care face totul
+    async function initAuth() {
       try {
-        setLoadingMessage("Se verifică sesiunea ta...");
-        const { data: { session: activeSession }, error } = await supabase.auth.getSession();
+        // Aducem și sesiunea și profilul dintr-un singur foc
+        const sessionData = await authService.getSession();
         
-        if (error) {
-          console.error("Supabase Auth Error:", error.message);
-          throw error;
-        }
-
-        if (activeSession && mounted) {
-          setLoadingMessage("Se încarcă profilul tău de utilizator...");
-          const userProfile = await authService.getUserProfile(activeSession.user.id);
-          
-          setSession(activeSession);
-          setProfile(userProfile);
-        }
-      } catch (error) {
-        console.error("Eroare severă de inițializare:", error);
-      } finally {
         if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log("🔄 Stare nouă Supabase:", event);
-      if (!mounted) return;
-
-      // Unii clienți Supabase folosesc INITIAL_SESSION, alții SIGNED_IN
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        if (newSession) {
-          try {
-            setLoading(true);
-            setLoadingMessage("Se aduc datele profilului...");
-            console.log("⬇️ Descărcăm profilul pentru ID:", newSession.user.id);
-            
-            const userProfile = await authService.getUserProfile(newSession.user.id);
-            console.log("✅ Profil descărcat:", userProfile);
-
-            if (mounted) {
-              setSession(newSession);
-              setProfile(userProfile);
-            }
-          } catch (err) {
-            console.error("❌ Eroare la descărcarea profilului (SIGNED_IN):", err);
-          } finally {
-            console.log("⏹️ Oprim ecranul de încărcare (garanție).");
-            if (mounted) setLoading(false);
+          if (sessionData) {
+            setSession(sessionData);
+            setProfile(sessionData.profile);
+          } else {
+            setSession(null);
+            setProfile(null);
           }
         }
-      } 
-      else if (event === 'TOKEN_REFRESHED') {
-        if (newSession && mounted) {
-          setSession(newSession);
-        }
-      } 
-      else if (event === 'SIGNED_OUT') {
-        if (mounted) {
-          setSession(null);
-          setProfile(null);
-          setLoading(false);
-        }
+      } catch (error) {
+        console.error("Eroare la inițializarea aplicației:", error);
+      } finally {
+        // GARANTAT: Indiferent dacă e succes sau eroare, oprim loading-ul!
+        if (mounted) setLoading(false);
+      }
+    }
+
+    // Rulăm la deschiderea / refresh-ul paginii
+    initAuth();
+
+    // 2. Ascultăm DOAR evenimentele importante (Login / Logout din interfață)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!mounted) return;
+
+      // Dacă Supabase ne anunță de un Refresh nativ, îl ignorăm pentru că îl tratează initAuth()
+      if (event === 'INITIAL_SESSION') return;
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+      } else if (event === 'SIGNED_IN') {
+        setLoading(true);
+        initAuth();
+      } else if (event === 'TOKEN_REFRESHED') {
+        // La reîmprospătarea tokenului, doar salvăm noua sesiune în fundal, nu blocăm ecranul
+        setSession(newSession);
       }
     });
 
@@ -100,10 +74,10 @@ function App() {
   if (loading) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-5">
-        <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
+        <Loader2 className="w-12 h-12 animate-spin text-sky-600" />
         <div className="flex flex-col items-center gap-1">
-          <p className="text-xl text-slate-800 font-bold">Vă rugăm așteptați</p>
-          <p className="text-slate-500 font-medium">{loadingMessage}</p>
+          <p className="text-xl text-slate-800 font-bold">Se încarcă</p>
+          <p className="text-slate-500 font-medium">Pregătim platforma Centria...</p>
         </div>
       </div>
     );

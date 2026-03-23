@@ -4,11 +4,7 @@ export interface Municipality {
   id: string;
   name: string;
   cui: string;
-  contactPerson: {
-    name: string;
-    email: string;
-    phone: string;
-  };
+  contactPerson: { name: string; email: string; phone: string; };
   locality: string;
 }
 
@@ -25,25 +21,20 @@ export interface Service {
   description: string;
 }
 
+// ⚠️ REPARAT: Am transformat câmpurile duplicate în Relații (JOIN-uri)
 export interface Request {
   id: string;
   title: string;
   description: string;
   status: RequestStatus;
   municipalityId: string;
-  municipalityName: string;
-  municipalityCui: string;
-  contactPerson: {
-    name: string;
-    email: string;
-    phone: string;
-  };
+  municipality?: { name: string; cui: string; locality: string }; // Date aduse prin JOIN
+  contactPerson: { name: string; email: string; phone: string; };
   locality: string;
   serviceId: string;
-  serviceName: string;
+  service?: { name: string }; // Date aduse prin JOIN
   providerId: string;
-  providerName: string;
-  providerCui: string;
+  provider?: { name: string; cui: string }; // Date aduse prin JOIN
   createdAt: string;
   estimatedStartDate?: string;
   updatedAt: string;
@@ -71,24 +62,20 @@ export interface FilterOptions {
   dateTo?: string;
   searchQuery?: string;
 }
+
 export interface LoginCredentials {
   email: string;
   password: string;
 }
 
-export interface UserSession {
-  user: any;
-  access_token: string;
-}
 export type AppRole = "admin" | "primarie" | "furnizor";
 
 export interface UserProfile {
   id: string;
   role: AppRole;
-  entityId: string | null; // Va conține id-ul primăriei sau furnizorului
+  entityId: string | null;
 }
 
-// Actualizăm UserSession ca să includă și profilul
 export interface UserSession {
   user: any;
   profile: UserProfile | null;

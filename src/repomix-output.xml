@@ -134,79 +134,53 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState("Se conectează la baza de date...");
 
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      if (!mounted) return;
-      
+    // 1. O singură funcție sigură care face totul
+    async function initAuth() {
       try {
-        setLoadingMessage("Se verifică sesiunea ta...");
-        const { data: { session: activeSession }, error } = await supabase.auth.getSession();
+        // Aducem și sesiunea și profilul dintr-un singur foc
+        const sessionData = await authService.getSession();
         
-        if (error) {
-          console.error("Supabase Auth Error:", error.message);
-          throw error;
-        }
-
-        if (activeSession && mounted) {
-          setLoadingMessage("Se încarcă profilul tău de utilizator...");
-          const userProfile = await authService.getUserProfile(activeSession.user.id);
-          
-          setSession(activeSession);
-          setProfile(userProfile);
-        }
-      } catch (error) {
-        console.error("Eroare severă de inițializare:", error);
-      } finally {
         if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log("🔄 Stare nouă Supabase:", event);
-      if (!mounted) return;
-
-      // Unii clienți Supabase folosesc INITIAL_SESSION, alții SIGNED_IN
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        if (newSession) {
-          try {
-            setLoading(true);
-            setLoadingMessage("Se aduc datele profilului...");
-            console.log("⬇️ Descărcăm profilul pentru ID:", newSession.user.id);
-            
-            const userProfile = await authService.getUserProfile(newSession.user.id);
-            console.log("✅ Profil descărcat:", userProfile);
-
-            if (mounted) {
-              setSession(newSession);
-              setProfile(userProfile);
-            }
-          } catch (err) {
-            console.error("❌ Eroare la descărcarea profilului (SIGNED_IN):", err);
-          } finally {
-            console.log("⏹️ Oprim ecranul de încărcare (garanție).");
-            if (mounted) setLoading(false);
+          if (sessionData) {
+            setSession(sessionData);
+            setProfile(sessionData.profile);
+          } else {
+            setSession(null);
+            setProfile(null);
           }
         }
-      } 
-      else if (event === 'TOKEN_REFRESHED') {
-        if (newSession && mounted) {
-          setSession(newSession);
-        }
-      } 
-      else if (event === 'SIGNED_OUT') {
-        if (mounted) {
-          setSession(null);
-          setProfile(null);
-          setLoading(false);
-        }
+      } catch (error) {
+        console.error("Eroare la inițializarea aplicației:", error);
+      } finally {
+        // GARANTAT: Indiferent dacă e succes sau eroare, oprim loading-ul!
+        if (mounted) setLoading(false);
+      }
+    }
+
+    // Rulăm la deschiderea / refresh-ul paginii
+    initAuth();
+
+    // 2. Ascultăm DOAR evenimentele importante (Login / Logout din interfață)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!mounted) return;
+
+      // Dacă Supabase ne anunță de un Refresh nativ, îl ignorăm pentru că îl tratează initAuth()
+      if (event === 'INITIAL_SESSION') return;
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+      } else if (event === 'SIGNED_IN') {
+        setLoading(true);
+        initAuth();
+      } else if (event === 'TOKEN_REFRESHED') {
+        // La reîmprospătarea tokenului, doar salvăm noua sesiune în fundal, nu blocăm ecranul
+        setSession(newSession);
       }
     });
 
@@ -219,10 +193,10 @@ function App() {
   if (loading) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-5">
-        <Loader2 className="w-12 h-12 animate-spin text-purple-600" />
+        <Loader2 className="w-12 h-12 animate-spin text-sky-600" />
         <div className="flex flex-col items-center gap-1">
-          <p className="text-xl text-slate-800 font-bold">Vă rugăm așteptați</p>
-          <p className="text-slate-500 font-medium">{loadingMessage}</p>
+          <p className="text-xl text-slate-800 font-bold">Se încarcă</p>
+          <p className="text-slate-500 font-medium">Pregătim platforma Centria...</p>
         </div>
       </div>
     );
@@ -1359,206 +1333,6 @@ export function Footer() {
 }
 </file>
 
-<file path="components/layout/Header.tsx">
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Building2, User, Bell, Menu, X, LogOut } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { useApp } from "@/context/AppContext";
-import { classNames } from "@/utils/helpers";
-import { authService } from "@/services/authService"; // Importăm serviciul de autentificare
-
-export function Header() {
-  const location = useLocation();
-  const { toggleProfile, stats, profile } = useApp(); 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Funcția de Deconectare
-  const handleLogout = async () => {
-    try {
-      await authService.logout();
-      // Odată delogat, Supabase va emite evenimentul 'SIGNED_OUT', 
-      // iar fișierul App.tsx ne va arunca automat pe pagina de Login!
-    } catch (error) {
-      console.error("Eroare la deconectare:", error);
-    }
-  };
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setMobileMenuOpen(false);
-      }
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  let navLinks: { path: string; label: string }[] = [];
-  
-  if (profile?.role === 'admin') {
-    navLinks = [
-      { path: "/", label: "Dashboard (Toate Cererile)" },
-      { path: "/history", label: "Istoric General" },
-    ];
-  } else if (profile?.role === 'primarie') {
-    navLinks = [
-      { path: "/", label: "Cererile Mele" },
-      { path: "/create-request", label: "Cerere Nouă" },
-      { path: "/history", label: "Istoric" },
-    ];
-  } else if (profile?.role === 'furnizor') {
-    navLinks = [
-      { path: "/", label: "Cereri Primite" },
-      { path: "/history", label: "Istoric Execuție" },
-    ];
-  } else {
-    navLinks = [
-      { path: "/", label: "Dashboard" }
-    ];
-  }
-
-  return (
-    <header
-      id="centria_header"
-      className="sticky top-0 z-40 border-b border-sky-800 bg-gradient-to-br from-sky-900 via-sky-700 to-sky-600 shadow-sm"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          
-          {/* Partea Stângă */}
-          <div className="flex items-center gap-8">
-            <Link 
-              to="/" 
-              className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg p-1 -ml-1"
-            >
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner group-hover:bg-white/25 transition-colors">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white tracking-wide">Centria</span>
-            </Link>
-
-            <nav className="hidden md:flex items-center gap-2">
-              {navLinks.map((link) => {
-                const isActive = location.pathname === link.path;
-                return (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={classNames(
-                      "px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                      isActive
-                        ? "bg-white/20 text-white shadow-sm"
-                        : "text-sky-100 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Partea Dreaptă */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-sky-900/40 border border-white/10 rounded-lg shadow-inner">
-              <span className="text-sm text-sky-200">Pending:</span>
-              <span className="text-sm font-bold text-white">{stats.pending}</span>
-            </div>
-
-            <button className="relative p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
-              <Bell className="w-5 h-5" />
-              {stats.pending > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full border border-sky-800 shadow-sm" />
-              )}
-            </button>
-
-            {/* Doar primăria are profil momentan, dar e ok să-l lăsăm ca placeholder */}
-            <button
-              onClick={toggleProfile}
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/5 text-white hover:bg-white/20 transition-colors"
-            >
-              <User className="w-5 h-5" />
-              <span className="text-sm font-medium">Profil</span>
-            </button>
-
-            {/* NOU: Buton Deconectare Desktop */}
-            <button
-              onClick={handleLogout}
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-100 hover:bg-rose-500/40 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-              title="Deconectare"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="text-sm font-medium">Ieșire</span>
-            </button>
-
-            {/* Buton Meniu Mobil */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors"
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Meniu Mobil */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.nav
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="md:hidden overflow-hidden"
-            >
-              <div className="flex flex-col gap-1 pb-4 pt-2 border-t border-white/10 mt-2">
-                {navLinks.map((link) => {
-                  const isActive = location.pathname === link.path;
-                  return (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={classNames(
-                        "px-4 py-3 rounded-lg text-base font-medium transition-colors",
-                        isActive
-                          ? "bg-white/20 text-white shadow-sm"
-                          : "text-sky-100 hover:bg-white/10 hover:text-white"
-                      )}
-                    >
-                      {link.label}
-                    </Link>
-                  );
-                })}
-                
-                <button
-                  onClick={() => { toggleProfile(); setMobileMenuOpen(false); }}
-                  className="flex items-center gap-3 px-4 py-3 mt-2 rounded-lg text-base font-medium text-sky-100 hover:bg-white/10 hover:text-white transition-colors text-left"
-                >
-                  <User className="w-5 h-5" />
-                  Profilul Meu
-                </button>
-
-                {/* NOU: Buton Deconectare Mobil */}
-                <button
-                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                  className="flex items-center gap-3 px-4 py-3 mt-1 rounded-lg text-base font-medium text-rose-200 hover:bg-rose-500/20 hover:text-white transition-colors text-left"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Deconectare
-                </button>
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
-      </div>
-    </header>
-  );
-}
-</file>
-
 <file path="components/layout/Layout.tsx">
 import React, { ReactNode } from "react";
 import { motion } from "motion/react";
@@ -1713,173 +1487,6 @@ export function NotificationContainer() {
         ))}
       </AnimatePresence>
     </div>
-  );
-}
-</file>
-
-<file path="components/profile/ProfileModal.tsx">
-import React, { useState } from "react";
-import { Building2, User, Mail, Phone, MapPin, Hash, ShieldCheck, Briefcase, Key, Lock } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { Modal } from "../common/Modal";
-import { Input } from "../common/Input";
-import { Button } from "../common/Button";
-import { useApp } from "@/context/AppContext";
-import { authService } from "@/services/authService";
-
-export function ProfileModal() {
-  const { user, profile, municipality, providers, isProfileOpen, closeProfile, notifySuccess, notifyError } = useApp();
-  
-  // Stări pentru schimbarea parolei
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isSavingPassword, setIsSavingPassword] = useState(false);
-
-  if (!profile || !user) return null;
-
-  let title = "Cont Utilizator";
-  let subtitle = user.email;
-  let MainIcon = User;
-  let profileFields: any[] = [];
-
-  if (profile.role === 'admin') {
-    title = "Administrator Sistem";
-    MainIcon = ShieldCheck;
-    profileFields = [
-      { icon: ShieldCheck, label: "Rol în platformă", value: "Administrator Global" },
-      { icon: Mail, label: "Adresă Email", value: user.email, fullWidth: true },
-    ];
-  } else if (profile.role === 'furnizor') {
-    const providerData = providers.find(p => p.id === profile.entityId);
-    title = providerData?.name || "Furnizor Servicii";
-    subtitle = "Partener B2B";
-    MainIcon = Briefcase;
-    profileFields = [
-      { icon: Briefcase, label: "Denumire Companie", value: providerData?.name || "N/A" },
-      { icon: Hash, label: "Cod Fiscal (CUI)", value: providerData?.cui || "N/A" },
-      { icon: Mail, label: "Email Cont", value: user.email, fullWidth: true },
-    ];
-  } else if (profile.role === 'primarie') {
-    title = municipality?.name || "Primărie";
-    subtitle = municipality?.locality || "Administrație Locală";
-    MainIcon = Building2;
-    profileFields = [
-      { icon: Building2, label: "Denumire Instituție", value: municipality?.name },
-      { icon: Hash, label: "Cod Unic (CUI)", value: municipality?.cui },
-      { icon: User, label: "Persoană de contact", value: municipality?.contactPerson?.name },
-      { icon: Phone, label: "Telefon", value: municipality?.contactPerson?.phone },
-      { icon: Mail, label: "Email Instituțional", value: user.email, fullWidth: true },
-      { icon: MapPin, label: "Adresă / Localitate", value: municipality?.locality, fullWidth: true },
-    ];
-  }
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword.length < 6) return notifyError("Parola trebuie să aibă minim 6 caractere.");
-    if (newPassword !== confirmPassword) return notifyError("Parolele nu coincid!");
-
-    setIsSavingPassword(true);
-    try {
-      await authService.changeMyPassword(newPassword);
-      notifySuccess("Parola a fost schimbată cu succes!");
-      setIsChangingPassword(false);
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (err: any) {
-      notifyError(err.message || "A apărut o eroare la schimbarea parolei.");
-    } finally {
-      setIsSavingPassword(false);
-    }
-  };
-
-  const handleClose = () => {
-    setIsChangingPassword(false);
-    setNewPassword("");
-    setConfirmPassword("");
-    closeProfile();
-  };
-
-  return (
-    <Modal isOpen={isProfileOpen} onClose={handleClose} size="lg">
-      <div className="flex flex-col">
-        <div className="relative pt-6 pb-6 px-6 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100 rounded-t-2xl overflow-hidden">
-          <div className="absolute -top-10 -right-10 p-6 opacity-5 pointer-events-none">
-            <MainIcon className="w-48 h-48" />
-          </div>
-          <div className="relative flex items-center gap-5">
-            <div className="relative">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 flex items-center justify-center shadow-lg shadow-sky-200">
-                <MainIcon className="w-10 h-10 text-white" />
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-0.5 shadow-sm">
-                <ShieldCheck className="w-6 h-6 text-emerald-500" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">{title}</h3>
-              <p className="text-sm font-medium text-sky-600 flex items-center gap-1.5 mt-1">{subtitle}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 bg-white space-y-6">
-          {/* Zona Detalii Cont */}
-          <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">Informații Cont</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {profileFields.map((field, index) => {
-                const Icon = field.icon;
-                return (
-                  <motion.div key={field.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 + 0.1 }} className={`flex items-start gap-3 p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 ${field.fullWidth ? "sm:col-span-2" : "col-span-1"}`}>
-                    <div className="mt-0.5 w-8 h-8 rounded-lg bg-white border border-slate-100 shadow-sm flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4 text-sky-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-slate-500 mb-0.5">{field.label}</p>
-                      <p className="text-sm font-semibold text-slate-900 truncate">{field.value || "-"}</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Zona Securitate (Schimbare Parolă) */}
-          <div className="border-t border-slate-100 pt-6">
-            <div className="flex items-center justify-between mb-4 px-1">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Securitate</h4>
-              {!isChangingPassword && (
-                <Button variant="ghost" size="sm" onClick={() => setIsChangingPassword(true)} leftIcon={<Key className="w-4 h-4" />}>
-                  Schimbă Parola
-                </Button>
-              )}
-            </div>
-
-            <AnimatePresence>
-              {isChangingPassword && (
-                <motion.form 
-                  initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                  onSubmit={handlePasswordChange}
-                  className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 overflow-hidden"
-                >
-                  <p className="text-sm text-slate-600 mb-2">Alege o parolă puternică de minim 6 caractere pentru contul tău.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input label="Parolă Nouă" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required leftIcon={<Lock className="w-4 h-4" />} />
-                    <Input label="Confirmă Parola" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required leftIcon={<Lock className="w-4 h-4" />} />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsChangingPassword(false)}>Anulează</Button>
-                    <Button type="submit" variant="primary" size="sm" isLoading={isSavingPassword}>Salvează Parola</Button>
-                  </div>
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </div>
-
-        </div>
-      </div>
-    </Modal>
   );
 }
 </file>
@@ -2262,10 +1869,11 @@ export function RequestDetailModal({
 }: RequestDetailModalProps) {
   if (!request) return null;
 
+  // REPARAT: Acum folosim "request.provider?.name" pentru că datele vin din JOIN-ul Supabase
   const detailFields = [
-    { icon: Building, label: "Furnizor", value: request.providerName },
-    { icon: Hash, label: "CUI Furnizor", value: request.providerCui },
-    { icon: Briefcase, label: "Serviciu", value: request.serviceName },
+    { icon: Building, label: "Furnizor", value: request.provider?.name || "Necunoscut" },
+    { icon: Hash, label: "CUI Furnizor", value: request.provider?.cui || "-" },
+    { icon: Briefcase, label: "Serviciu", value: request.service?.name || "Necunoscut" },
     { icon: Calendar, label: "Data Creării", value: formatDateTime(request.createdAt) },
     { icon: Clock, label: "Ultima Actualizare", value: formatDateTime(request.updatedAt) },
     { icon: User, label: "Persoană Contact", value: request.contactPerson.name },
@@ -2354,33 +1962,37 @@ export function RequestDetailModal({
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3 pt-4 border-t border-primary-100">
-          {onEdit && (
-            <Button
-              variant="outline"
-              leftIcon={<Edit className="w-4 h-4" />}
-              onClick={() => {
-                onEdit(request);
-                onClose();
-              }}
-            >
-              Editează
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="outline"
-              className="text-red-600 border-red-200 hover:bg-red-50"
-              leftIcon={<Trash2 className="w-4 h-4" />}
-              onClick={() => {
-                onDelete(request);
-                onClose();
-              }}
-            >
-              Șterge
-            </Button>
-          )}
-        </div>
+        {/* ⚠️ REPARAT: Blocăm editarea/ștergerea dacă cererea nu mai este în așteptare */}
+        {request.status === "pending" && (
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-primary-100">
+            {onEdit && (
+              <Button
+                variant="outline"
+                leftIcon={<Edit className="w-4 h-4" />}
+                onClick={() => {
+                  onEdit(request);
+                  onClose();
+                }}
+              >
+                Editează
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50"
+                leftIcon={<Trash2 className="w-4 h-4" />}
+                onClick={() => {
+                  onDelete(request);
+                  onClose();
+                }}
+              >
+                Șterge
+              </Button>
+            )}
+          </div>
+        )}
+
       </div>
     </Modal>
   );
@@ -2893,90 +2505,6 @@ export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: R
 }
 </file>
 
-<file path="context/AppContext.tsx">
-import { createContext, useContext, ReactNode } from "react";
-import { useRequests } from "@/hooks/useRequests";
-import { useNotifications } from "@/hooks/useNotifications";
-import { useMunicipality } from "@/hooks/useMunicipality";
-import { useProviders } from "@/hooks/useProviders";
-import { useServices } from "@/hooks/useServices";
-import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service, UserProfile } from "@/types";
-
-interface AppContextType {
-  user: any;
-  profile: UserProfile | null;
-  requests: Request[];
-  filteredRequests: Request[];
-  filters: FilterOptions;
-  stats: DashboardStats;
-  isLoadingRequests: boolean;
-  addRequest: (request: Omit<Request, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: string; updatedAt?: string }) => Promise<Request>;
-  updateRequest: (id: string, updates: Partial<Request>) => Promise<Request>;
-  deleteRequest: (id: string) => Promise<void>;
-  setFilter: <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => void;
-  clearFilters: () => void;
-  refreshRequests: () => Promise<void>;
-  notifications: Notification[];
-  notifySuccess: (message: string) => void;
-  notifyError: (message: string) => void;
-  notifyInfo: (message: string) => void;
-  notifyWarning: (message: string) => void;
-  removeNotification: (id: string) => void;
-  municipality: Municipality;
-  isProfileOpen: boolean;
-  openProfile: () => void;
-  closeProfile: () => void;
-  toggleProfile: () => void;
-  providers: Provider[];
-  services: Service[];
-  isLoadingProviders: boolean;
-  isLoadingServices: boolean;
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
-export function AppProvider({ children, user, profile }: { children: ReactNode, user: any, profile: UserProfile | null }) {
-  // Trimitem profilul în useRequests pentru a filtra datele pe bază de rol
-  const requestsHook = useRequests(profile); 
-  const notificationsHook = useNotifications();
-  const municipalityHook = useMunicipality(profile);
-  const providersHook = useProviders();
-  const servicesHook = useServices();
-
-  const value: AppContextType = {
-    user,
-    profile,
-    requests: requestsHook.requests,
-    filteredRequests: requestsHook.filteredRequests,
-    filters: requestsHook.filters,
-    stats: requestsHook.stats,
-    isLoadingRequests: requestsHook.isLoading,
-    addRequest: requestsHook.addRequest,
-    updateRequest: requestsHook.updateRequest,
-    deleteRequest: requestsHook.deleteRequest,
-    setFilter: requestsHook.setFilter,
-    clearFilters: requestsHook.clearFilters,
-    refreshRequests: requestsHook.refreshRequests,
-    ...notificationsHook,
-    ...municipalityHook,
-    providers: providersHook.providers,
-    services: servicesHook.services,
-    isLoadingProviders: providersHook.isLoading,
-    isLoadingServices: servicesHook.isLoading,
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
-}
-
-export function useApp(): AppContextType {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error("useApp must be used within an AppProvider");
-  }
-  return context;
-}
-</file>
-
 <file path="data/mockData.ts">
 import { Municipality, Provider, Service, Request } from "@/types";
 
@@ -3210,78 +2738,6 @@ export const initialRequests: Request[] = [
     updatedAt: "2024-01-28T09:30:00Z",
   },
 ];
-</file>
-
-<file path="hooks/useMunicipality.ts">
-import { useState, useEffect } from "react";
-import { Municipality, UserProfile } from "@/types";
-import { supabase } from "@/lib/supabase";
-
-const defaultMunicipality: Municipality = {
-  id: "",
-  name: "Nu este asociat",
-  cui: "",
-  contactPerson: { name: "", email: "", phone: "" },
-  locality: "",
-};
-
-export function useMunicipality(profile: UserProfile | null) {
-  const [municipality, setMunicipality] = useState<Municipality>(defaultMunicipality);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  useEffect(() => {
-    async function loadMunicipality() {
-      // Căutăm datele DOAR dacă cel logat este o primărie
-      if (profile?.role === 'primarie' && profile.entityId) {
-        try {
-          setIsLoading(true);
-          const { data, error } = await supabase
-            .from('municipalities')
-            .select('*')
-            .eq('id', profile.entityId)
-            .single();
-            
-          if (data && !error) {
-            setMunicipality({
-              id: data.id,
-              name: data.name,
-              cui: data.cui,
-              contactPerson: {
-                name: data.contact_person,
-                email: data.email,
-                phone: data.phone,
-              },
-              locality: data.locality,
-            });
-          }
-        } catch (err) {
-          console.error("Failed to load municipality:", err);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setMunicipality(defaultMunicipality);
-        setIsLoading(false);
-      }
-    }
-
-    loadMunicipality();
-  }, [profile]);
-
-  const openProfile = () => setIsProfileOpen(true);
-  const closeProfile = () => setIsProfileOpen(false);
-  const toggleProfile = () => setIsProfileOpen((prev) => !prev);
-
-  return {
-    municipality,
-    isLoading,
-    isProfileOpen,
-    openProfile,
-    closeProfile,
-    toggleProfile,
-  };
-}
 </file>
 
 <file path="hooks/useNotifications.ts">
@@ -3662,412 +3118,6 @@ export function Dashboard() {
 }
 </file>
 
-<file path="pages/dashboards/AdminDashboard.tsx">
-import React, { useState, useEffect } from "react";
-import { 
-  ShieldCheck, Plus, Users, Building, Briefcase, FileText, 
-  Loader2, Key, Eye, Edit2, Trash2, AlertTriangle, X
-} from "lucide-react";
-import { Button } from "@/components/common/Button";
-import { Input } from "@/components/common/Input";
-import { Select } from "@/components/common/Select";
-import { Modal } from "@/components/common/Modal";
-import { useApp } from "@/context/AppContext";
-import { createProvider } from "@/services/providerService";
-import { fetchAllMunicipalities, createMunicipality } from "@/services/municipalityService";
-import { adminService, AdminUserView } from "@/services/adminService";
-import { RequestList } from "@/components/requests/RequestList";
-import { Municipality, AppRole, RequestStatus } from "@/types";
-
-type TabType = 'cereri' | 'utilizatori' | 'primarii' | 'furnizori';
-type ModalAction = 'detail' | 'edit' | 'delete' | 'password' | null;
-
-export function AdminDashboard() {
-  const { filteredRequests, notifySuccess, notifyError, updateRequest, providers } = useApp();
-  const [activeTab, setActiveTab] = useState<TabType>('cereri');
-
-  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
-  const [users, setUsers] = useState<AdminUserView[]>([]);
-  const [isLoadingExtra, setIsLoadingExtra] = useState(false);
-
-  // Stări pentru Modalele de Utilizator
-  const [selectedUser, setSelectedUser] = useState<AdminUserView | null>(null);
-  const [userModalType, setUserModalType] = useState<ModalAction>(null);
-  const [editUserData, setEditUserData] = useState({ role: 'none', entityId: 'none' });
-
-  // Form states Furnizor & Primărie
-  const [newProvName, setNewProvName] = useState("");
-  const [newProvCui, setNewProvCui] = useState("");
-  const [newProvEmail, setNewProvEmail] = useState("");
-  const [newProvPassword, setNewProvPassword] = useState("");
-  const [munData, setMunData] = useState({ name: '', cui: '', contact_person: '', email: '', phone: '', locality: '', password: '' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    loadAdminData();
-  }, []);
-
-  const loadAdminData = async () => {
-    setIsLoadingExtra(true);
-    try {
-      setMunicipalities(await fetchAllMunicipalities());
-      setUsers(await adminService.getAllUsers());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoadingExtra(false);
-    }
-  };
-
-  const [adminNewPassword, setAdminNewPassword] = useState("");
-
-  const handleAdminChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-    if (adminNewPassword.length < 6) return notifyError("Parola trebuie să aibă minim 6 caractere.");
-    
-    setIsSubmitting(true);
-    try {
-      await adminService.changeUserPassword(selectedUser.id, adminNewPassword);
-      notifySuccess(`Parola pentru ${selectedUser.email} a fost schimbată cu succes!`);
-      setUserModalType(null);
-      setAdminNewPassword("");
-    } catch (err) {
-      notifyError("Eroare la schimbarea parolei.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // --- ACȚIUNI UTILIZATORI (CRUD) ---
-  const openEditModal = (u: AdminUserView) => {
-    setSelectedUser(u);
-    setEditUserData({ role: u.role || 'none', entityId: u.entityId || 'none' });
-    setUserModalType('edit');
-  };
-
-  const handleSaveUserEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-    setIsSubmitting(true);
-    try {
-      const role = editUserData.role === 'none' ? null : (editUserData.role as AppRole);
-      const entity = editUserData.entityId === 'none' ? null : editUserData.entityId;
-      
-      await adminService.updateUserMapping(selectedUser.id, role, entity);
-      notifySuccess("Datele utilizatorului au fost actualizate!");
-      setUserModalType(null);
-      loadAdminData();
-    } catch (err) {
-      notifyError("Eroare la salvarea modificărilor.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    setIsSubmitting(true);
-    try {
-      await adminService.deleteUser(selectedUser.id);
-      notifySuccess("Utilizatorul a fost șters definitiv!");
-      setUserModalType(null);
-      loadAdminData();
-    } catch (err: any) {
-      console.error("Eroare ștergere:", err);
-      // Acum ne va arăta pe ecran motivul exact pentru care nu se șterge
-      notifyError(err.message || "Eroare la ștergerea utilizatorului.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // --- ACȚIUNI ADĂUGARE INSTITUȚII ---
-  const handleAddProvider = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newProvPassword.length < 6) return notifyError("Parola trebuie să aibă minim 6 caractere.");
-    setIsSubmitting(true);
-    try {
-      const newProv = await createProvider(newProvName, newProvCui, newProvEmail);
-      await adminService.createUserAccountAndMap(newProvEmail, newProvPassword, 'furnizor', newProv.id);
-      notifySuccess("Furnizorul și contul au fost create!");
-      setNewProvName(""); setNewProvCui(""); setNewProvEmail(""); setNewProvPassword("");
-      loadAdminData();
-    } catch (err: any) { notifyError(err.message || "Eroare adăugare."); } 
-    finally { setIsSubmitting(false); }
-  };
-
-  const handleAddMunicipality = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (munData.password.length < 6) return notifyError("Parola minim 6 caractere.");
-    setIsSubmitting(true);
-    try {
-      const dbPayload = { name: munData.name, cui: munData.cui, contact_person: munData.contact_person, email: munData.email, phone: munData.phone, locality: munData.locality };
-      const newMun = await createMunicipality(dbPayload);
-      await adminService.createUserAccountAndMap(munData.email, munData.password, 'primarie', newMun.id);
-      notifySuccess("Primăria și contul au fost create!");
-      setMunData({ name: '', cui: '', contact_person: '', email: '', phone: '', locality: '', password: '' });
-      loadAdminData();
-    } catch (err: any) { notifyError(err.message || "Eroare adăugare."); } 
-    finally { setIsSubmitting(false); }
-  };
-
-  const getEntityName = (role: AppRole | null, entityId: string | null) => {
-    if (role === 'admin') return "Sistem Centria";
-    if (!role || !entityId) return "-";
-    if (role === 'primarie') return municipalities.find(m => m.id === entityId)?.name || "Necunoscut";
-    if (role === 'furnizor') return providers.find(p => p.id === entityId)?.name || "Necunoscut";
-    return "-";
-  };
-
-  const tabs = [
-    { id: 'cereri', label: 'Monitorizare', icon: FileText },
-    { id: 'utilizatori', label: 'Utilizatori', icon: Users },
-    { id: 'primarii', label: 'Primării', icon: Building },
-    { id: 'furnizori', label: 'Furnizori', icon: Briefcase },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-md bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
-          <ShieldCheck className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Panou Administrator</h1>
-          <p className="text-slate-500">Gestiunea sistemului și a utilizatorilor</p>
-        </div>
-      </div>
-
-      {/* Navigație Tab-uri */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4 mb-6">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
-              activeTab === tab.id
-                ? 'bg-purple-50 text-purple-700 shadow-sm border border-purple-100'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" /> {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'cereri' && (
-        <RequestList 
-          requests={filteredRequests} 
-          emptyMessage="Nu există nicio cerere în sistem." 
-          title="Toate Cererile" 
-          onUpdateStatus={(id: string, status: RequestStatus) => updateRequest(id, { status })} 
-        />
-      )}
-
-      {activeTab === 'utilizatori' && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          {isLoadingExtra ? (
-            <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-purple-500" /></div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="p-4 font-semibold text-slate-600">Email Utilizator</th>
-                    <th className="p-4 font-semibold text-slate-600 w-40">Rol Funcțional</th>
-                    <th className="p-4 font-semibold text-slate-600">Instituție Asociată</th>
-                    <th className="p-4 font-semibold text-slate-600 text-right w-36">Acțiuni</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {users.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="p-4 font-medium text-slate-900">{u.email}</td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize border ${
-                          u.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-200' : 
-                          u.role === 'primarie' ? 'bg-sky-50 text-sky-700 border-sky-200' : 
-                          u.role === 'furnizor' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
-                          'bg-slate-50 text-slate-700 border-slate-200'
-                        }`}>
-                          {u.role || "Fără Rol"}
-                        </span>
-                      </td>
-                      <td className="p-4 font-medium text-slate-700 truncate max-w-[200px]">
-                        {getEntityName(u.role, u.entityId)}
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => { setSelectedUser(u); setUserModalType('detail'); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Detalii">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => openEditModal(u)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Editează Rolul">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          {/* Butonul de schimbare parolă */}
-                          <button onClick={() => { setSelectedUser(u); setUserModalType('password'); }} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors" title="Schimbă Parola">
-                            <Key className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setSelectedUser(u); setUserModalType('delete'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors" title="Șterge">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* --- FORMULARE ADAUGARE INSTITUTII --- */}
-      {activeTab === 'primarii' && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-3xl">
-          <div className="mb-6 border-b border-slate-100 pb-4">
-            <h3 className="font-bold text-lg flex items-center gap-2"><Building className="w-5 h-5 text-purple-600"/> Adaugă Primărie</h3>
-          </div>
-          <form onSubmit={handleAddMunicipality} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-             <div className="space-y-4">
-                <Input label="Denumire" value={munData.name} onChange={e => setMunData({...munData, name: e.target.value})} required />
-                <Input label="CUI" value={munData.cui} onChange={e => setMunData({...munData, cui: e.target.value})} required />
-                <Input label="Localitate" value={munData.locality} onChange={e => setMunData({...munData, locality: e.target.value})} required />
-                <Input label="Nume Contact" value={munData.contact_person} onChange={e => setMunData({...munData, contact_person: e.target.value})} required />
-                <Input label="Telefon" value={munData.phone} onChange={e => setMunData({...munData, phone: e.target.value})} required />
-             </div>
-             <div className="space-y-4">
-                <Input label="Email Cont" type="email" value={munData.email} onChange={e => setMunData({...munData, email: e.target.value})} required />
-                <Input label="Parolă Acces" type="text" value={munData.password} onChange={e => setMunData({...munData, password: e.target.value})} required leftIcon={<Key className="w-4 h-4"/>}/>
-             </div>
-             <div className="sm:col-span-2 flex justify-end mt-4"><Button type="submit" variant="primary" isLoading={isSubmitting}>Înregistrează</Button></div>
-          </form>
-        </div>
-      )}
-
-      {activeTab === 'furnizori' && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-3xl">
-          <div className="mb-6 border-b border-slate-100 pb-4">
-            <h3 className="font-bold text-lg flex items-center gap-2"><Briefcase className="w-5 h-5 text-purple-600"/> Adaugă Furnizor</h3>
-          </div>
-          <form onSubmit={handleAddProvider} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-             <div className="space-y-4">
-               <Input label="Nume Companie" value={newProvName} onChange={(e) => setNewProvName(e.target.value)} required />
-               <Input label="CUI" value={newProvCui} onChange={(e) => setNewProvCui(e.target.value)} required />
-             </div>
-             <div className="space-y-4">
-               <Input label="Email Cont" type="email" value={newProvEmail} onChange={(e) => setNewProvEmail(e.target.value)} required />
-               <Input label="Parolă Acces" type="text" value={newProvPassword} onChange={(e) => setNewProvPassword(e.target.value)} required leftIcon={<Key className="w-4 h-4"/>} />
-             </div>
-             <div className="sm:col-span-2 flex justify-end mt-4"><Button type="submit" variant="primary" isLoading={isSubmitting}>Adaugă</Button></div>
-          </form>
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* MODALELE PENTRU ACȚIUNILE DE UTILIZATORI                    */}
-      {/* ========================================================= */}
-
-      {/* 1. Modal Detalii */}
-      <Modal isOpen={userModalType === 'detail'} onClose={() => setUserModalType(null)} title="Detalii Utilizator" size="sm">
-        {selectedUser && (
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-              <p className="text-sm text-slate-500 mb-1">Email</p>
-              <p className="font-semibold text-slate-900">{selectedUser.email}</p>
-            </div>
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-              <p className="text-sm text-slate-500 mb-1">Rol Curent</p>
-              <p className="font-semibold text-slate-900 uppercase">{selectedUser.role || "Fără Rol"}</p>
-            </div>
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-              <p className="text-sm text-slate-500 mb-1">Instituție Asociată</p>
-              <p className="font-semibold text-slate-900">{getEntityName(selectedUser.role, selectedUser.entityId)}</p>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* 2. Modal Editare */}
-      <Modal isOpen={userModalType === 'edit'} onClose={() => setUserModalType(null)} title="Editează Utilizatorul" size="sm">
-        <form onSubmit={handleSaveUserEdit} className="space-y-5">
-           <Select
-              label="Rol Funcțional"
-              value={editUserData.role}
-              onChange={(e) => {
-                setEditUserData({ role: e.target.value, entityId: 'none' }); 
-              }}
-              options={[
-                 { value: "none", label: "Fără Rol (Revocare Acces)" },
-                 { value: "admin", label: "Admin Global" },
-                 { value: "primarie", label: "Primărie" },
-                 { value: "furnizor", label: "Furnizor" }
-              ]}
-           />
-           {editUserData.role !== 'admin' && editUserData.role !== 'none' && (
-             <Select
-                label="Asociază o instituție"
-                value={editUserData.entityId}
-                onChange={(e) => setEditUserData({ ...editUserData, entityId: e.target.value })}
-                options={[
-                   { value: "none", label: "Selectează instituția..." },
-                   ...(editUserData.role === 'primarie' ? municipalities.map(m => ({ value: m.id, label: m.name })) : []),
-                   ...(editUserData.role === 'furnizor' ? providers.map(p => ({ value: p.id, label: p.name })) : [])
-                ]}
-             />
-           )}
-           <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="ghost" onClick={() => setUserModalType(null)}>Anulează</Button>
-              <Button type="submit" variant="primary" isLoading={isSubmitting}>Salvează</Button>
-           </div>
-        </form>
-      </Modal>
-
-      {/* 3. Modal Ștergere */}
-      <Modal isOpen={userModalType === 'delete'} onClose={() => setUserModalType(null)} size="sm">
-        <div className="flex flex-col items-center text-center pt-2">
-          <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mb-4">
-            <AlertTriangle className="w-7 h-7 text-rose-600" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">Ștergere Cont</h3>
-          <p className="text-slate-500 mb-8">
-            Ești sigur că vrei să ștergi utilizatorul <strong className="text-slate-800">{selectedUser?.email}</strong>? Nu va mai avea acces în aplicație.
-          </p>
-          <div className="flex gap-3 w-full">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setUserModalType(null)}>Anulează</Button>
-            <Button type="button" variant="danger" className="flex-1" onClick={handleDeleteUser} isLoading={isSubmitting}>Șterge Definitiv</Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* 4. Modal Schimbare Parolă (Admin) */}
-      <Modal isOpen={userModalType === 'password'} onClose={() => { setUserModalType(null); setAdminNewPassword(""); }} title="Resetează Parola" size="sm">
-        <form onSubmit={handleAdminChangePassword} className="space-y-4">
-          <p className="text-sm text-slate-600 mb-2">
-            Introduceți o nouă parolă pentru utilizatorul <strong className="text-slate-900">{selectedUser?.email}</strong>.
-          </p>
-          <Input 
-            label="Parolă Nouă" 
-            type="text" 
-            value={adminNewPassword} 
-            onChange={(e) => setAdminNewPassword(e.target.value)} 
-            placeholder="Minim 6 caractere"
-            required 
-            leftIcon={<Key className="w-4 h-4"/>} 
-          />
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <Button type="button" variant="ghost" onClick={() => { setUserModalType(null); setAdminNewPassword(""); }}>Anulează</Button>
-            <Button type="submit" variant="primary" isLoading={isSubmitting}>Schimbă Parola</Button>
-          </div>
-        </form>
-      </Modal>
-
-    </div>
-  );
-}
-</file>
-
 <file path="pages/dashboards/FurnizorDashboard.tsx">
 import React from "react";
 import { motion } from "motion/react";
@@ -4169,185 +3219,6 @@ export function PrimarieDashboard() {
 }
 </file>
 
-<file path="pages/Login.tsx">
-import React, { useState } from "react";
-import { motion } from "motion/react";
-import { 
-  Building2, Mail, Lock, LogIn, AlertCircle, 
-  ShieldCheck, Building, Briefcase 
-} from "lucide-react";
-import { Input } from "@/components/common/Input";
-import { Button } from "@/components/common/Button";
-import { authService } from "@/services/authService";
-import { useApp } from "@/context/AppContext";
-
-// ⚠️ AICI SETEZI CONTURILE DE TEST (Înlocuiește cu email-urile și parolele tale reale din Supabase)
-const DEMO_ACCOUNTS = {
-  admin: { email: "admin@centria.ro", password: "parola_admin_123" },
-  primarie: { email: "primarie@centria.ro", password: "parola123" },
-  furnizor: { email: "furnizor@centria.ro", password: "parola123" }
-};
-
-export function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { notifySuccess } = useApp();
-
-  // Am extras logica de logare într-o funcție separată pentru a o putea refolosi
-  const performLogin = async (loginEmail: string, loginPass: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await authService.login({ email: loginEmail, password: loginPass });
-      notifySuccess("Bun venit în platforma Centria!");
-    } catch (err: any) {
-      if (err.message.includes("Invalid login credentials")) {
-        setError("Email-ul sau parola sunt incorecte.");
-      } else {
-        setError("A apărut o eroare de conexiune. Încearcă din nou.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleManualLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) return;
-    performLogin(email, password);
-  };
-
-  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNTS) => {
-    const acc = DEMO_ACCOUNTS[role];
-    // Setăm vizual datele în input-uri (opțional, dar dă un feedback vizual bun)
-    setEmail(acc.email);
-    setPassword(acc.password);
-    // Declansăm logarea direct cu datele alese
-    performLogin(acc.email, acc.password);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-sky-50">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl shadow-sky-100 overflow-hidden">
-          <div className="p-8">
-            {/* Branding */}
-            <div className="flex flex-col items-center mb-10">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 mb-4">
-                <Building2 className="w-10 h-10 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Centria</h1>
-              <p className="text-slate-500 font-medium">Administrație Publică Inteligentă</p>
-            </div>
-
-            {/* Formularul Clasic */}
-            <form onSubmit={handleManualLogin} className="space-y-5">
-              {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 text-rose-700 text-sm"
-                >
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="font-medium">{error}</span>
-                </motion.div>
-              )}
-
-              <Input
-                label="Email Instituțional"
-                type="email"
-                autoComplete="email"
-                placeholder="nume.prenume@primarie.ro"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
-                required
-              />
-
-              <div className="space-y-1">
-                <Input
-                  label="Parolă"
-                  type="password"
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
-                  required
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full py-6 text-lg font-bold shadow-lg shadow-primary-100"
-                isLoading={isLoading}
-                disabled={isLoading}
-                leftIcon={!isLoading && <LogIn className="w-5 h-5" />}
-              >
-                {isLoading ? "Se verifică..." : "Intră în cont"}
-              </Button>
-            </form>
-
-            {/* Secțiunea de Conturi Demo (Quick Login) */}
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-4">
-                Testează platforma (Conturi Demo)
-              </p>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  disabled={isLoading}
-                  onClick={() => handleQuickLogin("admin")}
-                  className="flex flex-col gap-1 py-3 h-auto"
-                >
-                  <ShieldCheck className="w-5 h-5 text-purple-600" />
-                  <span className="text-xs">Admin</span>
-                </Button>
-                
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  disabled={isLoading}
-                  onClick={() => handleQuickLogin("primarie")}
-                  className="flex flex-col gap-1 py-3 h-auto"
-                >
-                  <Building className="w-5 h-5 text-sky-600" />
-                  <span className="text-xs">Primărie</span>
-                </Button>
-
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  disabled={isLoading}
-                  onClick={() => handleQuickLogin("furnizor")}
-                  className="flex flex-col gap-1 py-3 h-auto"
-                >
-                  <Briefcase className="w-5 h-5 text-emerald-600" />
-                  <span className="text-xs">Furnizor</span>
-                </Button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-</file>
-
 <file path="pages/RequestHistory.tsx">
 import React from "react";
 import { motion } from "motion/react";
@@ -4437,179 +3308,6 @@ export function RequestHistory() {
 }
 </file>
 
-<file path="services/adminService.ts">
-import { supabase } from "@/lib/supabase";
-import { AppRole } from "@/types";
-import { createClient } from "@supabase/supabase-js";
-
-export interface AdminUserView {
-  id: string;
-  email: string;
-  name: string | null;
-  role: AppRole | null;
-  entityId: string | null;
-}
-
-const supabaseAdmin = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
-
-export const adminService = {
-  async getAllUsers(): Promise<AdminUserView[]> {
-    const { data: users, error: userError } = await supabase.from("app_users").select("*");
-    const { data: profiles, error: profError } = await supabase.from("user_profiles").select("*");
-
-    if (userError) throw userError;
-
-    const profilesData = profiles || [];
-    return (users || []).map(u => {
-      const profile = profilesData.find(p => p.id === u.id);
-      return {
-        id: u.id,
-        email: u.email,
-        name: u.name,
-        role: profile?.role || null,
-        entityId: profile?.entity_id || null,
-      };
-    });
-  },
-
-  async updateUserMapping(id: string, role: AppRole | null, entityId: string | null) {
-    if (!role) {
-      // Dacă scoatem rolul, ștergem profilul complet
-      const { error } = await supabase.from("user_profiles").delete().eq("id", id);
-      if (error) throw error;
-      return null;
-    }
-    
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .upsert({ id, role, entity_id: entityId })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
-
-  async createUserAccountAndMap(email: string, password: string, role: AppRole, entityId: string) {
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signUp({
-      email,
-      password,
-    });
-
-    if (authError) throw authError;
-    if (!authData.user) throw new Error("Crearea utilizatorului a eșuat. Verifică parola.");
-
-    const { error: profileError } = await supabase
-      .from("user_profiles")
-      .upsert({ id: authData.user.id, role: role, entity_id: entityId });
-
-    if (profileError) throw profileError;
-    return authData.user;
-  },
-
-  // NOU: Ștergerea unui utilizator folosind funcția RPC cu drepturi depline
-  async deleteUser(id: string) {
-    // Apelăm Super-Funcția creată în SQL Editor
-    const { error } = await supabase.rpc('delete_user_and_auth', { target_user_id: id });
-    
-    if (error) {
-      console.error("Eroare severă la ștergerea contului:", error);
-      throw error;
-    }
-  }
-};
-</file>
-
-<file path="services/authService.ts">
-import { supabase } from "@/lib/supabase";
-import { LoginCredentials, UserProfile } from "@/types";
-
-export const authService = {
-  async login({ email, password }: LoginCredentials) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-    return data;
-  },
-
-  async logout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  },
-  
-  async getUserProfile(userId: string): Promise<UserProfile | null> {
-    console.log("-> [AuthService] Cerem profilul pentru ID-ul:", userId);
-
-    try {
-      // Creăm cererea către Supabase
-      const fetchProfile = supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
-
-      // Creăm o bombă cu ceas (5 secunde)
-      const timeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("TIMEOUT_BAZA_DE_DATE")), 5000)
-      );
-
-      // Le punem la întrecere: care termină prima?
-      const response: any = await Promise.race([fetchProfile, timeout]);
-
-      if (response.error) {
-        console.error("-> [AuthService] Supabase a returnat o eroare:", response.error);
-        return null;
-      }
-
-      console.log("-> [AuthService] Date primite cu succes:", response.data);
-
-      if (!response.data) return null;
-
-      return {
-        id: response.data.id,
-        role: response.data.role,
-        entityId: response.data.entity_id,
-      };
-
-    } catch (error: any) {
-      if (error.message === "TIMEOUT_BAZA_DE_DATE") {
-        console.error("❌ [AuthService] Baza de date NU a răspuns în 5 secunde! (Timeout)");
-      } else {
-        console.error("❌ [AuthService] Eroare critică:", error);
-      }
-      return null;
-    }
-  },
-
-  async getSession() {
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !session) return null;
-
-    // Folosim 'authService' în loc de 'this'
-    const profile = await authService.getUserProfile(session.user.id);
-
-    return {
-      ...session,
-      profile,
-    };
-  }, // <--- AICI AM ADĂUGAT VIRGULA LIPSĂ!
-
-  // NOU: Schimbarea propriei parole
-  async changeMyPassword(newPassword: string) {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-    if (error) throw error;
-  }
-};
-</file>
-
 <file path="services/municipalityService.ts">
 import { supabase } from "@/lib/supabase";
 import { Database } from "@/types/database";
@@ -4679,18 +3377,18 @@ export async function createProvider(name: string, cui: string, email: string): 
 
 <file path="services/requestService.ts">
 import { supabase } from "@/lib/supabase";
-import { DbRequest } from "@/types/database";
 import { Request, RequestStatus, UserProfile } from "@/types";
 
-function mapDbRequestToRequest(dbRequest: DbRequest): Request {
+// Mapare inteligentă a datelor relaționale
+function mapDbRequestToRequest(dbRequest: any): Request {
   return {
     id: dbRequest.id,
     title: dbRequest.title,
     description: dbRequest.description || "",
     status: dbRequest.status as RequestStatus,
     municipalityId: dbRequest.municipality_id || "",
-    municipalityName: dbRequest.municipality_name,
-    municipalityCui: dbRequest.municipality_cui,
+    // Luăm numele din JOIN, dacă există, altfel fallback
+    municipality: dbRequest.municipality || { name: "Necunoscut", cui: "-", locality: dbRequest.locality },
     contactPerson: {
       name: dbRequest.contact_person,
       email: dbRequest.contact_email,
@@ -4698,10 +3396,9 @@ function mapDbRequestToRequest(dbRequest: DbRequest): Request {
     },
     locality: dbRequest.locality,
     serviceId: dbRequest.service_id || "",
-    serviceName: dbRequest.service_name,
+    service: dbRequest.service || { name: "Serviciu Necunoscut" },
     providerId: dbRequest.provider_id || "",
-    providerName: dbRequest.provider_name,
-    providerCui: dbRequest.provider_cui,
+    provider: dbRequest.provider || { name: "Furnizor Necunoscut", cui: "-" },
     createdAt: dbRequest.created_at || new Date().toISOString(),
     estimatedStartDate: dbRequest.estimated_start_date || undefined,
     updatedAt: dbRequest.updated_at || new Date().toISOString(),
@@ -4709,23 +3406,23 @@ function mapDbRequestToRequest(dbRequest: DbRequest): Request {
 }
 
 export const requestService = {
-  // NOU: Acum primește profilul
   async fetchAll(profile: UserProfile | null): Promise<Request[]> {
-    // Baza query-ului: adu tot, ordonat
+    // ⚠️ REPARAT: Folosim JOIN-uri native Supabase pentru a evita denormalizarea
     let query = supabase
       .from("requests")
-      .select("*")
+      .select(`
+        *,
+        municipality:municipalities(name, cui, locality),
+        provider:providers(name, cui),
+        service:services(name)
+      `)
       .order("created_at", { ascending: false });
 
-    // Filtrarea inteligentă pe bază de Rol
     if (profile?.role === "primarie" && profile.entityId) {
-      // Primăria vede doar ce a creat ea
       query = query.eq("municipality_id", profile.entityId);
     } else if (profile?.role === "furnizor" && profile.entityId) {
-      // Furnizorul vede doar ce i-a fost atribuit lui
       query = query.eq("provider_id", profile.entityId);
     }
-    // Dacă e 'admin', nu adăugăm niciun '.eq', deci vede tot.
 
     const { data, error } = await query;
     if (error) throw error;
@@ -4733,26 +3430,22 @@ export const requestService = {
   },
 
   async create(request: Omit<Request, "id" | "createdAt" | "updatedAt">): Promise<Request> {
+    // ⚠️ REPARAT: Trimitem strict ID-urile, nu și numele (baza de date face restul)
     const dbPayload = {
       title: request.title,
       description: request.description,
       status: request.status,
       municipality_id: request.municipalityId,
-      municipality_name: request.municipalityName,
-      municipality_cui: request.municipalityCui,
       contact_person: request.contactPerson.name,
       contact_email: request.contactPerson.email,
       contact_phone: request.contactPerson.phone,
       locality: request.locality,
       service_id: request.serviceId,
-      service_name: request.serviceName,
       provider_id: request.providerId,
-      provider_name: request.providerName,
-      provider_cui: request.providerCui,
       estimated_start_date: request.estimatedStartDate || null,
     };
 
-    const { data, error } = await supabase.from("requests").insert([dbPayload]).select().single();
+    const { data, error } = await supabase.from("requests").insert([dbPayload]).select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)').single();
     if (error) throw error;
     return mapDbRequestToRequest(data);
   },
@@ -4764,7 +3457,7 @@ export const requestService = {
     if (updates.description) dbUpdates.description = updates.description;
     if (updates.estimatedStartDate !== undefined) dbUpdates.estimated_start_date = updates.estimatedStartDate;
 
-    const { data, error } = await supabase.from("requests").update(dbUpdates).eq("id", id).select().single();
+    const { data, error } = await supabase.from("requests").update(dbUpdates).eq("id", id).select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)').single();
     if (error) throw error;
     return mapDbRequestToRequest(data);
   },
@@ -5302,11 +3995,7 @@ export interface Municipality {
   id: string;
   name: string;
   cui: string;
-  contactPerson: {
-    name: string;
-    email: string;
-    phone: string;
-  };
+  contactPerson: { name: string; email: string; phone: string; };
   locality: string;
 }
 
@@ -5323,25 +4012,20 @@ export interface Service {
   description: string;
 }
 
+// ⚠️ REPARAT: Am transformat câmpurile duplicate în Relații (JOIN-uri)
 export interface Request {
   id: string;
   title: string;
   description: string;
   status: RequestStatus;
   municipalityId: string;
-  municipalityName: string;
-  municipalityCui: string;
-  contactPerson: {
-    name: string;
-    email: string;
-    phone: string;
-  };
+  municipality?: { name: string; cui: string; locality: string }; // Date aduse prin JOIN
+  contactPerson: { name: string; email: string; phone: string; };
   locality: string;
   serviceId: string;
-  serviceName: string;
+  service?: { name: string }; // Date aduse prin JOIN
   providerId: string;
-  providerName: string;
-  providerCui: string;
+  provider?: { name: string; cui: string }; // Date aduse prin JOIN
   createdAt: string;
   estimatedStartDate?: string;
   updatedAt: string;
@@ -5369,24 +4053,20 @@ export interface FilterOptions {
   dateTo?: string;
   searchQuery?: string;
 }
+
 export interface LoginCredentials {
   email: string;
   password: string;
 }
 
-export interface UserSession {
-  user: any;
-  access_token: string;
-}
 export type AppRole = "admin" | "primarie" | "furnizor";
 
 export interface UserProfile {
   id: string;
   role: AppRole;
-  entityId: string | null; // Va conține id-ul primăriei sau furnizorului
+  entityId: string | null;
 }
 
-// Actualizăm UserSession ca să includă și profilul
 export interface UserSession {
   user: any;
   profile: UserProfile | null;
@@ -5488,6 +4168,1268 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+</file>
+
+<file path="components/layout/Header.tsx">
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Building2, User, Bell, Menu, X, LogOut } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useApp } from "@/context/AppContext";
+import { classNames } from "@/utils/helpers";
+import { authService } from "@/services/authService"; // Importăm serviciul de autentificare
+
+export function Header() {
+  const location = useLocation();
+  const { toggleProfile, stats, profile } = useApp(); 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Funcția de Deconectare
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      // Odată delogat, Supabase va emite evenimentul 'SIGNED_OUT', 
+      // iar fișierul App.tsx ne va arunca automat pe pagina de Login!
+    } catch (error) {
+      console.error("Eroare la deconectare:", error);
+    }
+  };
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  let navLinks: { path: string; label: string }[] = [];
+  
+  if (profile?.role === 'admin') {
+    navLinks = [
+      { path: "/", label: "Dashboard (Toate Cererile)" },
+      { path: "/history", label: "Istoric General" },
+    ];
+  } else if (profile?.role === 'primarie') {
+    navLinks = [
+      { path: "/", label: "Cererile Mele" },
+      { path: "/create-request", label: "Cerere Nouă" },
+      { path: "/history", label: "Istoric" },
+    ];
+  } else if (profile?.role === 'furnizor') {
+    navLinks = [
+      { path: "/", label: "Cereri Primite" },
+      { path: "/history", label: "Istoric Execuție" },
+    ];
+  } else {
+    navLinks = [
+      { path: "/", label: "Dashboard" }
+    ];
+  }
+
+  return (
+    <header
+      id="centria_header"
+      className="sticky top-0 z-40 border-b border-sky-800 bg-gradient-to-br from-sky-900 via-sky-700 to-sky-600 shadow-sm"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          
+          {/* Partea Stângă */}
+          <div className="flex items-center gap-8">
+            <Link 
+              to="/" 
+              className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg p-1 -ml-1"
+            >
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner group-hover:bg-white/25 transition-colors">
+                <Building2 className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white tracking-wide">Centria</span>
+            </Link>
+
+            <nav className="hidden md:flex items-center gap-2">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.path;
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={classNames(
+                      "px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
+                      isActive
+                        ? "bg-white/20 text-white shadow-sm"
+                        : "text-sky-100 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Partea Dreaptă */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-sky-900/40 border border-white/10 rounded-lg shadow-inner">
+              <span className="text-sm text-sky-200">Pending:</span>
+              <span className="text-sm font-bold text-white">{stats.pending}</span>
+            </div>
+
+            <button className="relative p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50">
+              <Bell className="w-5 h-5" />
+              {stats.pending > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full border border-sky-800 shadow-sm" />
+              )}
+            </button>
+
+            {/* Doar primăria are profil momentan, dar e ok să-l lăsăm ca placeholder */}
+            <button
+              onClick={toggleProfile}
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/5 text-white hover:bg-white/20 transition-colors"
+            >
+              <User className="w-5 h-5" />
+              <span className="text-sm font-medium">Profil</span>
+            </button>
+
+            {/* NOU: Buton Deconectare Desktop */}
+            <button
+              onClick={handleLogout}
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-100 hover:bg-rose-500/40 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+              title="Deconectare"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-sm font-medium">Ieșire</span>
+            </button>
+
+            {/* Buton Meniu Mobil */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Meniu Mobil */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.nav
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="md:hidden overflow-hidden"
+            >
+              <div className="flex flex-col gap-1 pb-4 pt-2 border-t border-white/10 mt-2">
+                {navLinks.map((link) => {
+                  const isActive = location.pathname === link.path;
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={classNames(
+                        "px-4 py-3 rounded-lg text-base font-medium transition-colors",
+                        isActive
+                          ? "bg-white/20 text-white shadow-sm"
+                          : "text-sky-100 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+                
+                <button
+                  onClick={() => { toggleProfile(); setMobileMenuOpen(false); }}
+                  className="flex items-center gap-3 px-4 py-3 mt-2 rounded-lg text-base font-medium text-sky-100 hover:bg-white/10 hover:text-white transition-colors text-left"
+                >
+                  <User className="w-5 h-5" />
+                  Profilul Meu
+                </button>
+
+                {/* NOU: Buton Deconectare Mobil */}
+                <button
+                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                  className="flex items-center gap-3 px-4 py-3 mt-1 rounded-lg text-base font-medium text-rose-200 hover:bg-rose-500/20 hover:text-white transition-colors text-left"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Deconectare
+                </button>
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
+      </div>
+    </header>
+  );
+}
+</file>
+
+<file path="components/profile/ProfileModal.tsx">
+import React, { useState } from "react";
+import { Building2, User, Mail, Phone, MapPin, Hash, ShieldCheck, Briefcase, Key, Lock } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Modal } from "../common/Modal";
+import { Input } from "../common/Input";
+import { Button } from "../common/Button";
+import { useApp } from "@/context/AppContext";
+import { authService } from "@/services/authService";
+
+export function ProfileModal() {
+  const { user, profile, municipality, providers, isProfileOpen, closeProfile, notifySuccess, notifyError } = useApp();
+  
+  // Stări pentru schimbarea parolei
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  if (!profile || !user) return null;
+
+  let title = "Cont Utilizator";
+  let subtitle = user.email;
+  let MainIcon = User;
+  let profileFields: any[] = [];
+
+  if (profile.role === 'admin') {
+    title = "Administrator Sistem";
+    MainIcon = ShieldCheck;
+    profileFields = [
+      { icon: ShieldCheck, label: "Rol în platformă", value: "Administrator Global" },
+      { icon: Mail, label: "Adresă Email", value: user.email, fullWidth: true },
+    ];
+  } else if (profile.role === 'furnizor') {
+    const providerData = providers.find(p => p.id === profile.entityId);
+    title = providerData?.name || "Furnizor Servicii";
+    subtitle = "Partener B2B";
+    MainIcon = Briefcase;
+    profileFields = [
+      { icon: Briefcase, label: "Denumire Companie", value: providerData?.name || "N/A" },
+      { icon: Hash, label: "Cod Fiscal (CUI)", value: providerData?.cui || "N/A" },
+      { icon: Mail, label: "Email Cont", value: user.email, fullWidth: true },
+    ];
+  } else if (profile.role === 'primarie') {
+    title = municipality?.name || "Primărie";
+    subtitle = municipality?.locality || "Administrație Locală";
+    MainIcon = Building2;
+    profileFields = [
+      { icon: Building2, label: "Denumire Instituție", value: municipality?.name },
+      { icon: Hash, label: "Cod Unic (CUI)", value: municipality?.cui },
+      { icon: User, label: "Persoană de contact", value: municipality?.contactPerson?.name },
+      { icon: Phone, label: "Telefon", value: municipality?.contactPerson?.phone },
+      { icon: Mail, label: "Email Instituțional", value: user.email, fullWidth: true },
+      { icon: MapPin, label: "Adresă / Localitate", value: municipality?.locality, fullWidth: true },
+    ];
+  }
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) return notifyError("Parola trebuie să aibă minim 6 caractere.");
+    if (newPassword !== confirmPassword) return notifyError("Parolele nu coincid!");
+
+    setIsSavingPassword(true);
+    try {
+      await authService.changeMyPassword(newPassword);
+      notifySuccess("Parola a fost schimbată cu succes!");
+      setIsChangingPassword(false);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      notifyError(err.message || "A apărut o eroare la schimbarea parolei.");
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
+
+  const handleClose = () => {
+    setIsChangingPassword(false);
+    setNewPassword("");
+    setConfirmPassword("");
+    closeProfile();
+  };
+
+  return (
+    <Modal isOpen={isProfileOpen} onClose={handleClose} size="lg">
+      <div className="flex flex-col">
+        <div className="relative pt-6 pb-6 px-6 bg-gradient-to-br from-slate-50 to-white border-b border-slate-100 rounded-t-2xl overflow-hidden">
+          <div className="absolute -top-10 -right-10 p-6 opacity-5 pointer-events-none">
+            <MainIcon className="w-48 h-48" />
+          </div>
+          <div className="relative flex items-center gap-5">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 flex items-center justify-center shadow-lg shadow-sky-200">
+                <MainIcon className="w-10 h-10 text-white" />
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-0.5 shadow-sm">
+                <ShieldCheck className="w-6 h-6 text-emerald-500" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">{title}</h3>
+              <p className="text-sm font-medium text-sky-600 flex items-center gap-1.5 mt-1">{subtitle}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 bg-white space-y-6">
+          {/* Zona Detalii Cont */}
+          <div>
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-1">Informații Cont</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {profileFields.map((field, index) => {
+                const Icon = field.icon;
+                return (
+                  <motion.div key={field.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 + 0.1 }} className={`flex items-start gap-3 p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 ${field.fullWidth ? "sm:col-span-2" : "col-span-1"}`}>
+                    <div className="mt-0.5 w-8 h-8 rounded-lg bg-white border border-slate-100 shadow-sm flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 text-sky-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-slate-500 mb-0.5">{field.label}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{field.value || "-"}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Zona Securitate (Schimbare Parolă) */}
+          <div className="border-t border-slate-100 pt-6">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Securitate</h4>
+              {!isChangingPassword && (
+                <Button variant="ghost" size="sm" onClick={() => setIsChangingPassword(true)} leftIcon={<Key className="w-4 h-4" />}>
+                  Schimbă Parola
+                </Button>
+              )}
+            </div>
+
+            <AnimatePresence>
+              {isChangingPassword && (
+                <motion.form 
+                  initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                  onSubmit={handlePasswordChange}
+                  className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 overflow-hidden"
+                >
+                  <p className="text-sm text-slate-600 mb-2">Alege o parolă puternică de minim 6 caractere pentru contul tău.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input label="Parolă Nouă" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required leftIcon={<Lock className="w-4 h-4" />} />
+                    <Input label="Confirmă Parola" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required leftIcon={<Lock className="w-4 h-4" />} />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsChangingPassword(false)}>Anulează</Button>
+                    <Button type="submit" variant="primary" size="sm" isLoading={isSavingPassword}>Salvează Parola</Button>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </div>
+
+        </div>
+      </div>
+    </Modal>
+  );
+}
+</file>
+
+<file path="context/AppContext.tsx">
+import { createContext, useContext, ReactNode } from "react";
+import { useRequests } from "@/hooks/useRequests";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useMunicipality } from "@/hooks/useMunicipality";
+import { useProviders } from "@/hooks/useProviders";
+import { useServices } from "@/hooks/useServices";
+import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service, UserProfile } from "@/types";
+
+interface AppContextType {
+  user: any;
+  profile: UserProfile | null;
+  requests: Request[];
+  filteredRequests: Request[];
+  filters: FilterOptions;
+  stats: DashboardStats;
+  isLoadingRequests: boolean;
+  addRequest: (request: Omit<Request, "id" | "createdAt" | "updatedAt"> & { id?: string; createdAt?: string; updatedAt?: string }) => Promise<Request>;
+  updateRequest: (id: string, updates: Partial<Request>) => Promise<Request>;
+  deleteRequest: (id: string) => Promise<void>;
+  setFilter: <K extends keyof FilterOptions>(key: K, value: FilterOptions[K]) => void;
+  clearFilters: () => void;
+  refreshRequests: () => Promise<void>;
+  notifications: Notification[];
+  notifySuccess: (message: string) => void;
+  notifyError: (message: string) => void;
+  notifyInfo: (message: string) => void;
+  notifyWarning: (message: string) => void;
+  removeNotification: (id: string) => void;
+  municipality: Municipality;
+  isProfileOpen: boolean;
+  openProfile: () => void;
+  closeProfile: () => void;
+  toggleProfile: () => void;
+  providers: Provider[];
+  services: Service[];
+  isLoadingProviders: boolean;
+  isLoadingServices: boolean;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export function AppProvider({ children, user, profile }: { children: ReactNode, user: any, profile: UserProfile | null }) {
+  // Trimitem profilul în useRequests pentru a filtra datele pe bază de rol
+  const requestsHook = useRequests(profile); 
+  const notificationsHook = useNotifications();
+  const municipalityHook = useMunicipality(profile);
+  const providersHook = useProviders();
+  const servicesHook = useServices();
+
+  const value: AppContextType = {
+    user,
+    profile,
+    requests: requestsHook.requests,
+    filteredRequests: requestsHook.filteredRequests,
+    filters: requestsHook.filters,
+    stats: requestsHook.stats,
+    isLoadingRequests: requestsHook.isLoading,
+    addRequest: requestsHook.addRequest,
+    updateRequest: requestsHook.updateRequest,
+    deleteRequest: requestsHook.deleteRequest,
+    setFilter: requestsHook.setFilter,
+    clearFilters: requestsHook.clearFilters,
+    refreshRequests: requestsHook.refreshRequests,
+    ...notificationsHook,
+    ...municipalityHook,
+    providers: providersHook.providers,
+    services: servicesHook.services,
+    isLoadingProviders: providersHook.isLoading,
+    isLoadingServices: servicesHook.isLoading,
+  };
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+export function useApp(): AppContextType {
+  const context = useContext(AppContext);
+  if (context === undefined) {
+    throw new Error("useApp must be used within an AppProvider");
+  }
+  return context;
+}
+</file>
+
+<file path="hooks/useMunicipality.ts">
+import { useState, useEffect } from "react";
+import { Municipality, UserProfile } from "@/types";
+import { supabase } from "@/lib/supabase";
+
+const defaultMunicipality: Municipality = {
+  id: "",
+  name: "Nu este asociat",
+  cui: "",
+  contactPerson: { name: "", email: "", phone: "" },
+  locality: "",
+};
+
+export function useMunicipality(profile: UserProfile | null) {
+  const [municipality, setMunicipality] = useState<Municipality>(defaultMunicipality);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  useEffect(() => {
+    async function loadMunicipality() {
+      // Căutăm datele DOAR dacă cel logat este o primărie
+      if (profile?.role === 'primarie' && profile.entityId) {
+        try {
+          setIsLoading(true);
+          const { data, error } = await supabase
+            .from('municipalities')
+            .select('*')
+            .eq('id', profile.entityId)
+            .single();
+            
+          if (data && !error) {
+            setMunicipality({
+              id: data.id,
+              name: data.name,
+              cui: data.cui,
+              contactPerson: {
+                name: data.contact_person,
+                email: data.email,
+                phone: data.phone,
+              },
+              locality: data.locality,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load municipality:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setMunicipality(defaultMunicipality);
+        setIsLoading(false);
+      }
+    }
+
+    loadMunicipality();
+  }, [profile]);
+
+  const openProfile = () => setIsProfileOpen(true);
+  const closeProfile = () => setIsProfileOpen(false);
+  const toggleProfile = () => setIsProfileOpen((prev) => !prev);
+
+  return {
+    municipality,
+    isLoading,
+    isProfileOpen,
+    openProfile,
+    closeProfile,
+    toggleProfile,
+  };
+}
+</file>
+
+<file path="pages/dashboards/AdminDashboard.tsx">
+import React, { useState, useEffect } from "react";
+import { 
+  ShieldCheck, Plus, Users, Building, Briefcase, FileText, 
+  Loader2, Key, Eye, Edit2, Trash2, AlertTriangle, X
+} from "lucide-react";
+import { Button } from "@/components/common/Button";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { Modal } from "@/components/common/Modal";
+import { useApp } from "@/context/AppContext";
+import { createProvider } from "@/services/providerService";
+import { fetchAllMunicipalities, createMunicipality } from "@/services/municipalityService";
+import { adminService, AdminUserView } from "@/services/adminService";
+import { RequestList } from "@/components/requests/RequestList";
+import { Municipality, AppRole, RequestStatus } from "@/types";
+
+type TabType = 'cereri' | 'utilizatori' | 'primarii' | 'furnizori';
+type ModalAction = 'detail' | 'edit' | 'delete' | 'password' | null;
+
+export function AdminDashboard() {
+  const { filteredRequests, notifySuccess, notifyError, updateRequest, providers } = useApp();
+  const [activeTab, setActiveTab] = useState<TabType>('cereri');
+
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
+  const [users, setUsers] = useState<AdminUserView[]>([]);
+  const [isLoadingExtra, setIsLoadingExtra] = useState(false);
+
+  // Stări pentru Modalele de Utilizator
+  const [selectedUser, setSelectedUser] = useState<AdminUserView | null>(null);
+  const [userModalType, setUserModalType] = useState<ModalAction>(null);
+  const [editUserData, setEditUserData] = useState({ role: 'none', entityId: 'none' });
+
+  // Form states Furnizor & Primărie
+  const [newProvName, setNewProvName] = useState("");
+  const [newProvCui, setNewProvCui] = useState("");
+  const [newProvEmail, setNewProvEmail] = useState("");
+  const [newProvPassword, setNewProvPassword] = useState("");
+  const [munData, setMunData] = useState({ name: '', cui: '', contact_person: '', email: '', phone: '', locality: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadAdminData();
+  }, []);
+
+  const loadAdminData = async () => {
+    setIsLoadingExtra(true);
+    try {
+      setMunicipalities(await fetchAllMunicipalities());
+      setUsers(await adminService.getAllUsers());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingExtra(false);
+    }
+  };
+
+  const [adminNewPassword, setAdminNewPassword] = useState("");
+
+  const handleAdminChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    if (adminNewPassword.length < 6) return notifyError("Parola trebuie să aibă minim 6 caractere.");
+    
+    setIsSubmitting(true);
+    try {
+      await adminService.changeUserPassword(selectedUser.id, adminNewPassword);
+      notifySuccess(`Parola pentru ${selectedUser.email} a fost schimbată cu succes!`);
+      setUserModalType(null);
+      setAdminNewPassword("");
+    } catch (err) {
+      notifyError("Eroare la schimbarea parolei.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- ACȚIUNI UTILIZATORI (CRUD) ---
+  const openEditModal = (u: AdminUserView) => {
+    setSelectedUser(u);
+    setEditUserData({ role: u.role || 'none', entityId: u.entityId || 'none' });
+    setUserModalType('edit');
+  };
+
+  const handleSaveUserEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    setIsSubmitting(true);
+    try {
+      const role = editUserData.role === 'none' ? null : (editUserData.role as AppRole);
+      const entity = editUserData.entityId === 'none' ? null : editUserData.entityId;
+      
+      await adminService.updateUserMapping(selectedUser.id, role, entity);
+      notifySuccess("Datele utilizatorului au fost actualizate!");
+      setUserModalType(null);
+      loadAdminData();
+    } catch (err) {
+      notifyError("Eroare la salvarea modificărilor.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    setIsSubmitting(true);
+    try {
+      await adminService.deleteUser(selectedUser.id);
+      notifySuccess("Utilizatorul a fost șters definitiv!");
+      setUserModalType(null);
+      loadAdminData();
+    } catch (err: any) {
+      console.error("Eroare ștergere:", err);
+      // Acum ne va arăta pe ecran motivul exact pentru care nu se șterge
+      notifyError(err.message || "Eroare la ștergerea utilizatorului.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- ACȚIUNI ADĂUGARE INSTITUȚII ---
+  const handleAddProvider = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newProvPassword.length < 6) return notifyError("Parola trebuie să aibă minim 6 caractere.");
+    setIsSubmitting(true);
+    try {
+      const newProv = await createProvider(newProvName, newProvCui, newProvEmail);
+      await adminService.createUserAccountAndMap(newProvEmail, newProvPassword, 'furnizor', newProv.id);
+      notifySuccess("Furnizorul și contul au fost create!");
+      setNewProvName(""); setNewProvCui(""); setNewProvEmail(""); setNewProvPassword("");
+      loadAdminData();
+    } catch (err: any) { notifyError(err.message || "Eroare adăugare."); } 
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleAddMunicipality = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (munData.password.length < 6) return notifyError("Parola minim 6 caractere.");
+    setIsSubmitting(true);
+    try {
+      const dbPayload = { name: munData.name, cui: munData.cui, contact_person: munData.contact_person, email: munData.email, phone: munData.phone, locality: munData.locality };
+      const newMun = await createMunicipality(dbPayload);
+      await adminService.createUserAccountAndMap(munData.email, munData.password, 'primarie', newMun.id);
+      notifySuccess("Primăria și contul au fost create!");
+      setMunData({ name: '', cui: '', contact_person: '', email: '', phone: '', locality: '', password: '' });
+      loadAdminData();
+    } catch (err: any) { notifyError(err.message || "Eroare adăugare."); } 
+    finally { setIsSubmitting(false); }
+  };
+
+  const getEntityName = (role: AppRole | null, entityId: string | null) => {
+    if (role === 'admin') return "Sistem Centria";
+    if (!role || !entityId) return "-";
+    if (role === 'primarie') return municipalities.find(m => m.id === entityId)?.name || "Necunoscut";
+    if (role === 'furnizor') return providers.find(p => p.id === entityId)?.name || "Necunoscut";
+    return "-";
+  };
+
+  const tabs = [
+    { id: 'cereri', label: 'Monitorizare', icon: FileText },
+    { id: 'utilizatori', label: 'Utilizatori', icon: Users },
+    { id: 'primarii', label: 'Primării', icon: Building },
+    { id: 'furnizori', label: 'Furnizori', icon: Briefcase },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 rounded-md bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center">
+          <ShieldCheck className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Panou Administrator</h1>
+          <p className="text-slate-500">Gestiunea sistemului și a utilizatorilor</p>
+        </div>
+      </div>
+
+      {/* Navigație Tab-uri */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4 mb-6">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as TabType)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+              activeTab === tab.id
+                ? 'bg-purple-50 text-purple-700 shadow-sm border border-purple-100'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" /> {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'cereri' && (
+        <RequestList 
+          requests={filteredRequests} 
+          emptyMessage="Nu există nicio cerere în sistem." 
+          title="Toate Cererile" 
+          onUpdateStatus={(id: string, status: RequestStatus) => updateRequest(id, { status })} 
+        />
+      )}
+
+      {activeTab === 'utilizatori' && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          {isLoadingExtra ? (
+            <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-purple-500" /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[900px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="p-4 font-semibold text-slate-600">Email Utilizator</th>
+                    <th className="p-4 font-semibold text-slate-600 w-40">Rol Funcțional</th>
+                    <th className="p-4 font-semibold text-slate-600">Instituție Asociată</th>
+                    <th className="p-4 font-semibold text-slate-600 text-right w-36">Acțiuni</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {users.map(u => (
+                    <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4 font-medium text-slate-900">{u.email}</td>
+                      <td className="p-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize border ${
+                          u.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-200' : 
+                          u.role === 'primarie' ? 'bg-sky-50 text-sky-700 border-sky-200' : 
+                          u.role === 'furnizor' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
+                          'bg-slate-50 text-slate-700 border-slate-200'
+                        }`}>
+                          {u.role || "Fără Rol"}
+                        </span>
+                      </td>
+                      <td className="p-4 font-medium text-slate-700 truncate max-w-[200px]">
+                        {getEntityName(u.role, u.entityId)}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => { setSelectedUser(u); setUserModalType('detail'); }} className="p-2 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Detalii">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => openEditModal(u)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Editează Rolul">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          {/* Butonul de schimbare parolă */}
+                          <button onClick={() => { setSelectedUser(u); setUserModalType('password'); }} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors" title="Schimbă Parola">
+                            <Key className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => { setSelectedUser(u); setUserModalType('delete'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors" title="Șterge">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* --- FORMULARE ADAUGARE INSTITUTII --- */}
+      {activeTab === 'primarii' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-3xl">
+          <div className="mb-6 border-b border-slate-100 pb-4">
+            <h3 className="font-bold text-lg flex items-center gap-2"><Building className="w-5 h-5 text-purple-600"/> Adaugă Primărie</h3>
+          </div>
+          <form onSubmit={handleAddMunicipality} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+             <div className="space-y-4">
+                <Input label="Denumire" value={munData.name} onChange={e => setMunData({...munData, name: e.target.value})} required />
+                <Input label="CUI" value={munData.cui} onChange={e => setMunData({...munData, cui: e.target.value})} required />
+                <Input label="Localitate" value={munData.locality} onChange={e => setMunData({...munData, locality: e.target.value})} required />
+                <Input label="Nume Contact" value={munData.contact_person} onChange={e => setMunData({...munData, contact_person: e.target.value})} required />
+                <Input label="Telefon" value={munData.phone} onChange={e => setMunData({...munData, phone: e.target.value})} required />
+             </div>
+             <div className="space-y-4">
+                <Input label="Email Cont" type="email" value={munData.email} onChange={e => setMunData({...munData, email: e.target.value})} required />
+                <Input label="Parolă Acces" type="text" value={munData.password} onChange={e => setMunData({...munData, password: e.target.value})} required leftIcon={<Key className="w-4 h-4"/>}/>
+             </div>
+             <div className="sm:col-span-2 flex justify-end mt-4"><Button type="submit" variant="primary" isLoading={isSubmitting}>Înregistrează</Button></div>
+          </form>
+        </div>
+      )}
+
+      {activeTab === 'furnizori' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-3xl">
+          <div className="mb-6 border-b border-slate-100 pb-4">
+            <h3 className="font-bold text-lg flex items-center gap-2"><Briefcase className="w-5 h-5 text-purple-600"/> Adaugă Furnizor</h3>
+          </div>
+          <form onSubmit={handleAddProvider} className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+             <div className="space-y-4">
+               <Input label="Nume Companie" value={newProvName} onChange={(e) => setNewProvName(e.target.value)} required />
+               <Input label="CUI" value={newProvCui} onChange={(e) => setNewProvCui(e.target.value)} required />
+             </div>
+             <div className="space-y-4">
+               <Input label="Email Cont" type="email" value={newProvEmail} onChange={(e) => setNewProvEmail(e.target.value)} required />
+               <Input label="Parolă Acces" type="text" value={newProvPassword} onChange={(e) => setNewProvPassword(e.target.value)} required leftIcon={<Key className="w-4 h-4"/>} />
+             </div>
+             <div className="sm:col-span-2 flex justify-end mt-4"><Button type="submit" variant="primary" isLoading={isSubmitting}>Adaugă</Button></div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODALELE PENTRU ACȚIUNILE DE UTILIZATORI                    */}
+      {/* ========================================================= */}
+
+      {/* 1. Modal Detalii */}
+      <Modal isOpen={userModalType === 'detail'} onClose={() => setUserModalType(null)} title="Detalii Utilizator" size="sm">
+        {selectedUser && (
+          <div className="space-y-4">
+            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <p className="text-sm text-slate-500 mb-1">Email</p>
+              <p className="font-semibold text-slate-900">{selectedUser.email}</p>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <p className="text-sm text-slate-500 mb-1">Rol Curent</p>
+              <p className="font-semibold text-slate-900 uppercase">{selectedUser.role || "Fără Rol"}</p>
+            </div>
+            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+              <p className="text-sm text-slate-500 mb-1">Instituție Asociată</p>
+              <p className="font-semibold text-slate-900">{getEntityName(selectedUser.role, selectedUser.entityId)}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 2. Modal Editare */}
+      <Modal isOpen={userModalType === 'edit'} onClose={() => setUserModalType(null)} title="Editează Utilizatorul" size="sm">
+        <form onSubmit={handleSaveUserEdit} className="space-y-5">
+           <Select
+              label="Rol Funcțional"
+              value={editUserData.role}
+              onChange={(e) => {
+                setEditUserData({ role: e.target.value, entityId: 'none' }); 
+              }}
+              options={[
+                 { value: "none", label: "Fără Rol (Revocare Acces)" },
+                 { value: "admin", label: "Admin Global" },
+                 { value: "primarie", label: "Primărie" },
+                 { value: "furnizor", label: "Furnizor" }
+              ]}
+           />
+           {editUserData.role !== 'admin' && editUserData.role !== 'none' && (
+             <Select
+                label="Asociază o instituție"
+                value={editUserData.entityId}
+                onChange={(e) => setEditUserData({ ...editUserData, entityId: e.target.value })}
+                options={[
+                   { value: "none", label: "Selectează instituția..." },
+                   ...(editUserData.role === 'primarie' ? municipalities.map(m => ({ value: m.id, label: m.name })) : []),
+                   ...(editUserData.role === 'furnizor' ? providers.map(p => ({ value: p.id, label: p.name })) : [])
+                ]}
+             />
+           )}
+           <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="ghost" onClick={() => setUserModalType(null)}>Anulează</Button>
+              <Button type="submit" variant="primary" isLoading={isSubmitting}>Salvează</Button>
+           </div>
+        </form>
+      </Modal>
+
+      {/* 3. Modal Ștergere */}
+      <Modal isOpen={userModalType === 'delete'} onClose={() => setUserModalType(null)} size="sm">
+        <div className="flex flex-col items-center text-center pt-2">
+          <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-7 h-7 text-rose-600" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Ștergere Cont</h3>
+          <p className="text-slate-500 mb-8">
+            Ești sigur că vrei să ștergi utilizatorul <strong className="text-slate-800">{selectedUser?.email}</strong>? Nu va mai avea acces în aplicație.
+          </p>
+          <div className="flex gap-3 w-full">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setUserModalType(null)}>Anulează</Button>
+            <Button type="button" variant="danger" className="flex-1" onClick={handleDeleteUser} isLoading={isSubmitting}>Șterge Definitiv</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* 4. Modal Schimbare Parolă (Admin) */}
+      <Modal isOpen={userModalType === 'password'} onClose={() => { setUserModalType(null); setAdminNewPassword(""); }} title="Resetează Parola" size="sm">
+        <form onSubmit={handleAdminChangePassword} className="space-y-4">
+          <p className="text-sm text-slate-600 mb-2">
+            Introduceți o nouă parolă pentru utilizatorul <strong className="text-slate-900">{selectedUser?.email}</strong>.
+          </p>
+          <Input 
+            label="Parolă Nouă" 
+            type="text" 
+            value={adminNewPassword} 
+            onChange={(e) => setAdminNewPassword(e.target.value)} 
+            placeholder="Minim 6 caractere"
+            required 
+            leftIcon={<Key className="w-4 h-4"/>} 
+          />
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button type="button" variant="ghost" onClick={() => { setUserModalType(null); setAdminNewPassword(""); }}>Anulează</Button>
+            <Button type="submit" variant="primary" isLoading={isSubmitting}>Schimbă Parola</Button>
+          </div>
+        </form>
+      </Modal>
+
+    </div>
+  );
+}
+</file>
+
+<file path="pages/Login.tsx">
+import React, { useState } from "react";
+import { motion } from "motion/react";
+import { 
+  Building2, Mail, Lock, LogIn, AlertCircle, 
+  ShieldCheck, Building, Briefcase 
+} from "lucide-react";
+import { Input } from "@/components/common/Input";
+import { Button } from "@/components/common/Button";
+import { authService } from "@/services/authService";
+import { useApp } from "@/context/AppContext";
+
+// ⚠️ REPARAT: Conturile de test au fost golite pentru producție. 
+// Utilizatorul trebuie să își scrie manual parola reală din motive de securitate.
+const DEMO_ACCOUNTS = {
+  admin: { email: "admin@centria.ro", password: "" },
+  primarie: { email: "primarie@centria.ro", password: "" },
+  furnizor: { email: "furnizor@centria.ro", password: "" }
+};
+
+export function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { notifySuccess } = useApp();
+
+  const performLogin = async (loginEmail: string, loginPass: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await authService.login({ email: loginEmail, password: loginPass });
+      notifySuccess("Bun venit în platforma Centria!");
+    } catch (err: any) {
+      if (err.message.includes("Invalid login credentials")) {
+        setError("Email-ul sau parola sunt incorecte.");
+      } else {
+        setError("A apărut o eroare de conexiune. Încearcă din nou.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleManualLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+    performLogin(email, password);
+  };
+
+  const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNTS) => {
+    const acc = DEMO_ACCOUNTS[role];
+    setEmail(acc.email);
+    setPassword(acc.password);
+    
+    // Dacă am setat o parolă în DEMO_ACCOUNTS, facem login instant.
+    // Altfel, doar completăm email-ul și lăsăm utilizatorul să scrie parola.
+    if (acc.password) {
+      performLogin(acc.email, acc.password);
+    } else {
+      setError(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-sky-50">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md"
+      >
+        <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl shadow-sky-100 overflow-hidden">
+          <div className="p-8">
+            {/* Branding */}
+            <div className="flex flex-col items-center mb-10">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 mb-4">
+                <Building2 className="w-10 h-10 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Centria</h1>
+              <p className="text-slate-500 font-medium">Administrație Publică Inteligentă</p>
+            </div>
+
+            {/* Formularul Clasic */}
+            <form onSubmit={handleManualLogin} className="space-y-5">
+              {error && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 text-rose-700 text-sm"
+                >
+                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="font-medium">{error}</span>
+                </motion.div>
+              )}
+
+              <Input
+                label="Email Instituțional"
+                type="email"
+                autoComplete="email"
+                placeholder="nume.prenume@primarie.ro"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
+                required
+              />
+
+              <div className="space-y-1">
+                <Input
+                  label="Parolă"
+                  type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full py-6 text-lg font-bold shadow-lg shadow-primary-100"
+                isLoading={isLoading}
+                disabled={isLoading}
+                leftIcon={!isLoading && <LogIn className="w-5 h-5" />}
+              >
+                {isLoading ? "Se verifică..." : "Intră în cont"}
+              </Button>
+            </form>
+
+            {/* Secțiunea de Completare Rapidă (Quick Fill) */}
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-4">
+                Completare Rapidă Email
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handleQuickLogin("admin")}
+                  className="flex flex-col gap-1 py-3 h-auto"
+                >
+                  <ShieldCheck className="w-5 h-5 text-purple-600" />
+                  <span className="text-xs">Admin</span>
+                </Button>
+                
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handleQuickLogin("primarie")}
+                  className="flex flex-col gap-1 py-3 h-auto"
+                >
+                  <Building className="w-5 h-5 text-sky-600" />
+                  <span className="text-xs">Primărie</span>
+                </Button>
+
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handleQuickLogin("furnizor")}
+                  className="flex flex-col gap-1 py-3 h-auto"
+                >
+                  <Briefcase className="w-5 h-5 text-emerald-600" />
+                  <span className="text-xs">Furnizor</span>
+                </Button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+</file>
+
+<file path="services/adminService.ts">
+import { supabase } from "@/lib/supabase";
+import { AppRole } from "@/types";
+
+export interface AdminUserView {
+  id: string;
+  email: string;
+  name: string | null;
+  role: AppRole | null;
+  entityId: string | null;
+}
+
+export const adminService = {
+  async getAllUsers(): Promise<AdminUserView[]> {
+    const { data: users, error: userError } = await supabase.from("app_users").select("*");
+    const { data: profiles, error: profError } = await supabase.from("user_profiles").select("*");
+
+    if (userError) throw userError;
+
+    const profilesData = profiles || [];
+    return (users || []).map(u => {
+      const profile = profilesData.find(p => p.id === u.id);
+      return {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: profile?.role || null,
+        entityId: profile?.entity_id || null,
+      };
+    });
+  },
+
+  async updateUserMapping(id: string, role: AppRole | null, entityId: string | null) {
+    if (!role) {
+      const { error } = await supabase.from("user_profiles").delete().eq("id", id);
+      if (error) throw error;
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .upsert({ id, role, entity_id: entityId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // ⚠️ REPARAT: Folosim funcția RPC atomică! Niciun "client fantomă" nu mai este posibil.
+  async createUserAccountAndMap(email: string, password: string, role: AppRole, entityId: string) {
+    const { data: newUserId, error } = await supabase.rpc('admin_create_user_and_profile', {
+      p_email: email,
+      p_password: password,
+      p_role: role,
+      p_entity_id: entityId
+    });
+
+    if (error) {
+      console.error("Eroare la crearea contului în tranzacție:", error);
+      throw new Error("Nu s-a putut crea contul de utilizator.");
+    }
+
+    return newUserId;
+  },
+
+  async deleteUser(id: string) {
+    const { error } = await supabase.rpc('delete_user_and_auth', { target_user_id: id });
+    if (error) {
+      console.error("Eroare severă la ștergerea contului:", error);
+      throw error;
+    }
+  },
+
+  async changeUserPassword(userId: string, newPassword: string) {
+    const { error } = await supabase.rpc('admin_change_user_password', { 
+      target_user_id: userId,
+      new_password: newPassword
+    });
+    if (error) throw error;
+  }
+};
+</file>
+
+<file path="services/authService.ts">
+import { supabase } from "@/lib/supabase";
+import { LoginCredentials, UserProfile } from "@/types";
+
+export const authService = {
+  async login({ email, password }: LoginCredentials) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  async logout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
+  
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    try {
+      // ⚠️ REPARAT: Supabase gestionează automat timeout-urile și reconectările
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        role: data.role,
+        entityId: data.entity_id,
+      };
+    } catch (error: any) {
+      console.error("❌ [AuthService] Eroare la citirea profilului:", error);
+      return null;
+    }
+  },
+
+  async getSession() {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) return null;
+
+    // Folosim 'authService' în loc de 'this'
+    const profile = await authService.getUserProfile(session.user.id);
+
+    return {
+      ...session,
+      profile,
+    };
+  }, // <--- AICI AM ADĂUGAT VIRGULA LIPSĂ!
+
+  // NOU: Schimbarea propriei parole
+  async changeMyPassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    if (error) throw error;
+  }
+};
 </file>
 
 </files>

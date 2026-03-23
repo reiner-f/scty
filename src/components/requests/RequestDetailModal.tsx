@@ -29,10 +29,11 @@ export function RequestDetailModal({
 }: RequestDetailModalProps) {
   if (!request) return null;
 
+  // REPARAT: Acum folosim "request.provider?.name" pentru că datele vin din JOIN-ul Supabase
   const detailFields = [
-    { icon: Building, label: "Furnizor", value: request.providerName },
-    { icon: Hash, label: "CUI Furnizor", value: request.providerCui },
-    { icon: Briefcase, label: "Serviciu", value: request.serviceName },
+    { icon: Building, label: "Furnizor", value: request.provider?.name || "Necunoscut" },
+    { icon: Hash, label: "CUI Furnizor", value: request.provider?.cui || "-" },
+    { icon: Briefcase, label: "Serviciu", value: request.service?.name || "Necunoscut" },
     { icon: Calendar, label: "Data Creării", value: formatDateTime(request.createdAt) },
     { icon: Clock, label: "Ultima Actualizare", value: formatDateTime(request.updatedAt) },
     { icon: User, label: "Persoană Contact", value: request.contactPerson.name },
@@ -121,33 +122,37 @@ export function RequestDetailModal({
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3 pt-4 border-t border-primary-100">
-          {onEdit && (
-            <Button
-              variant="outline"
-              leftIcon={<Edit className="w-4 h-4" />}
-              onClick={() => {
-                onEdit(request);
-                onClose();
-              }}
-            >
-              Editează
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="outline"
-              className="text-red-600 border-red-200 hover:bg-red-50"
-              leftIcon={<Trash2 className="w-4 h-4" />}
-              onClick={() => {
-                onDelete(request);
-                onClose();
-              }}
-            >
-              Șterge
-            </Button>
-          )}
-        </div>
+        {/* ⚠️ REPARAT: Blocăm editarea/ștergerea dacă cererea nu mai este în așteptare */}
+        {request.status === "pending" && (
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-primary-100">
+            {onEdit && (
+              <Button
+                variant="outline"
+                leftIcon={<Edit className="w-4 h-4" />}
+                onClick={() => {
+                  onEdit(request);
+                  onClose();
+                }}
+              >
+                Editează
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50"
+                leftIcon={<Trash2 className="w-4 h-4" />}
+                onClick={() => {
+                  onDelete(request);
+                  onClose();
+                }}
+              >
+                Șterge
+              </Button>
+            )}
+          </div>
+        )}
+
       </div>
     </Modal>
   );

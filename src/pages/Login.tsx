@@ -9,11 +9,12 @@ import { Button } from "@/components/common/Button";
 import { authService } from "@/services/authService";
 import { useApp } from "@/context/AppContext";
 
-// ⚠️ AICI SETEZI CONTURILE DE TEST (Înlocuiește cu email-urile și parolele tale reale din Supabase)
+// ⚠️ REPARAT: Conturile de test au fost golite pentru producție. 
+// Utilizatorul trebuie să își scrie manual parola reală din motive de securitate.
 const DEMO_ACCOUNTS = {
-  admin: { email: "admin@centria.ro", password: "parola_admin_123" },
-  primarie: { email: "primarie@centria.ro", password: "parola123" },
-  furnizor: { email: "furnizor@centria.ro", password: "parola123" }
+  admin: { email: "admin@centria.ro", password: "" },
+  primarie: { email: "primarie@centria.ro", password: "" },
+  furnizor: { email: "furnizor@centria.ro", password: "" }
 };
 
 export function Login() {
@@ -23,7 +24,6 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const { notifySuccess } = useApp();
 
-  // Am extras logica de logare într-o funcție separată pentru a o putea refolosi
   const performLogin = async (loginEmail: string, loginPass: string) => {
     setIsLoading(true);
     setError(null);
@@ -50,11 +50,16 @@ export function Login() {
 
   const handleQuickLogin = (role: keyof typeof DEMO_ACCOUNTS) => {
     const acc = DEMO_ACCOUNTS[role];
-    // Setăm vizual datele în input-uri (opțional, dar dă un feedback vizual bun)
     setEmail(acc.email);
     setPassword(acc.password);
-    // Declansăm logarea direct cu datele alese
-    performLogin(acc.email, acc.password);
+    
+    // Dacă am setat o parolă în DEMO_ACCOUNTS, facem login instant.
+    // Altfel, doar completăm email-ul și lăsăm utilizatorul să scrie parola.
+    if (acc.password) {
+      performLogin(acc.email, acc.password);
+    } else {
+      setError(null);
+    }
   };
 
   return (
@@ -123,10 +128,10 @@ export function Login() {
               </Button>
             </form>
 
-            {/* Secțiunea de Conturi Demo (Quick Login) */}
+            {/* Secțiunea de Completare Rapidă (Quick Fill) */}
             <div className="mt-8 pt-6 border-t border-slate-100">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-4">
-                Testează platforma (Conturi Demo)
+                Completare Rapidă Email
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
