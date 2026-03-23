@@ -21,23 +21,24 @@ export interface Service {
   description: string;
 }
 
-// ⚠️ REPARAT: Am transformat câmpurile duplicate în Relații (JOIN-uri)
+// Adaugă documentUrl în interfața Request
 export interface Request {
   id: string;
   title: string;
   description: string;
   status: RequestStatus;
   municipalityId: string;
-  municipality?: { name: string; cui: string; locality: string }; // Date aduse prin JOIN
+  municipality?: { name: string; cui: string; locality: string };
   contactPerson: { name: string; email: string; phone: string; };
   locality: string;
   serviceId: string;
-  service?: { name: string }; // Date aduse prin JOIN
+  service?: { name: string };
   providerId: string;
-  provider?: { name: string; cui: string }; // Date aduse prin JOIN
+  provider?: { name: string; cui: string };
   createdAt: string;
   estimatedStartDate?: string;
   updatedAt: string;
+  documentUrl?: string; // <--- NOU: Adăugat pentru fișiere
 }
 
 export interface Notification {

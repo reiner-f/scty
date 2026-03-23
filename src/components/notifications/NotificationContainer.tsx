@@ -1,6 +1,5 @@
-import React from "react";
+import React, { forwardRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-// Am schimbat CheckCircle cu CheckCircle2 pentru un aspect puțin mai subțire și modern
 import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react"; 
 import { useApp } from "@/context/AppContext";
 import { Notification } from "@/types";
@@ -28,54 +27,60 @@ const iconColorMap = {
   info: "text-blue-500",
 };
 
-function NotificationItem({
-  notification,
-  onRemove,
-}: {
+interface NotificationItemProps {
   notification: Notification;
   onRemove: (id: string) => void;
-}) {
-  const Icon = iconMap[notification.type];
-
-  return (
-    <motion.div
-      // Prop-ul MAGIC: Animație fluidă când o notificare este ștearsă iar celelalte se rearanjează
-      layout 
-      // Animație Apple-like: Apare de sus, cu un blur subtil
-      initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(4px)" }}
-      animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-      exit={{ opacity: 0, scale: 0.85, filter: "blur(2px)", transition: { duration: 0.2 } }}
-      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      
-      // Accesibilitate vitală
-      role="alert"
-      aria-live="assertive"
-      
-      className={classNames(
-        // Reactivăm pointer-events doar pentru notificare, nu pentru tot ecranul
-        "pointer-events-auto flex items-start gap-3 w-full p-4 rounded-2xl border shadow-xl shadow-slate-200/50 backdrop-blur-sm",
-        styleMap[notification.type]
-      )}
-    >
-      {/* Iconița sus (în caz că textul e lung și se întinde pe 2 rânduri) */}
-      <Icon className={classNames("w-5 h-5 flex-shrink-0 mt-0.5", iconColorMap[notification.type])} />
-      
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium leading-relaxed">
-          {notification.message}
-        </p>
-      </div>
-
-      <button
-        onClick={() => onRemove(notification.id)}
-        aria-label="Închide notificarea"
-        className="flex-shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-lg opacity-50 hover:opacity-100 hover:bg-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10"
-      >
-        <X className="w-4 h-4" />
-      </button>
-    </motion.div>
-  );
 }
+
+// REPARAT: Am folosit forwardRef pentru ca Framer Motion să poată anima componenta la ieșire (exit)
+const NotificationItem = forwardRef<HTMLDivElement, NotificationItemProps>(
+  ({ notification, onRemove }, ref) => {
+    const Icon = iconMap[notification.type];
+
+    return (
+      <motion.div
+        ref={ref} // Aici trimitem ref-ul către Framer Motion
+        // Prop-ul MAGIC: Animație fluidă când o notificare este ștearsă iar celelalte se rearanjează
+        layout 
+        // Animație Apple-like: Apare de sus, cu un blur subtil
+        initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.85, filter: "blur(2px)", transition: { duration: 0.2 } }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        
+        // Accesibilitate vitală
+        role="alert"
+        aria-live="assertive"
+        
+        className={classNames(
+          // Reactivăm pointer-events doar pentru notificare, nu pentru tot ecranul
+          "pointer-events-auto flex items-start gap-3 w-full p-4 rounded-2xl border shadow-xl shadow-slate-200/50 backdrop-blur-sm",
+          styleMap[notification.type]
+        )}
+      >
+        {/* Iconița sus (în caz că textul e lung și se întinde pe 2 rânduri) */}
+        <Icon className={classNames("w-5 h-5 flex-shrink-0 mt-0.5", iconColorMap[notification.type])} />
+        
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium leading-relaxed">
+            {notification.message}
+          </p>
+        </div>
+
+        <button
+          onClick={() => onRemove(notification.id)}
+          aria-label="Închide notificarea"
+          className="flex-shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-lg opacity-50 hover:opacity-100 hover:bg-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </motion.div>
+    );
+  }
+);
+
+// Nume de afișare necesar când folosim forwardRef (ajută la debugging)
+NotificationItem.displayName = "NotificationItem";
 
 export function NotificationContainer() {
   const { notifications, removeNotification } = useApp();

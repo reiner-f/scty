@@ -1,10 +1,11 @@
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useEffect } from "react";
 import { useRequests } from "@/hooks/useRequests";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useMunicipality } from "@/hooks/useMunicipality";
 import { useProviders } from "@/hooks/useProviders";
 import { useServices } from "@/hooks/useServices";
 import { Request, FilterOptions, DashboardStats, Municipality, Notification, Provider, Service, UserProfile } from "@/types";
+import { supabase } from "@/lib/supabase";
 
 interface AppContextType {
   user: any;
@@ -40,12 +41,46 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children, user, profile }: { children: ReactNode, user: any, profile: UserProfile | null }) {
-  // Trimitem profilul în useRequests pentru a filtra datele pe bază de rol
-  const requestsHook = useRequests(profile); 
+  // Aducem toate hook-urile externe
+  const requestsHook = useRequests(profile);
   const notificationsHook = useNotifications();
   const municipalityHook = useMunicipality(profile);
   const providersHook = useProviders();
   const servicesHook = useServices();
+
+  // Extragem exact funcțiile de care avem nevoie pentru Realtime
+  const { refreshRequests } = requestsHook;
+  const { notifySuccess } = notificationsHook;
+
+  // NOU: ASCULTĂM MODIFICĂRILE ÎN TIMP REAL
+  useEffect(() => {
+    // Dacă utilizatorul nu este logat, nu deschidem nicio conexiune WebSocket
+    if (!profile) return; 
+
+    const requestChannel = supabase
+      .channel('cereri-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests' },
+        (payload) => {
+          console.log('🔄 Sincronizare Live Detectată:', payload);
+          
+          // Orice schimbare are loc în BD, îi spunem aplicației să descarce noile date silențios
+          refreshRequests(); 
+          
+          // Bonus: Dacă s-a introdus o cerere NOUĂ și utilizatorul curent este Furnizor
+          if (payload.eventType === 'INSERT' && profile.role === 'furnizor') {
+            notifySuccess("Ai primit o cerere nouă!");
+          }
+        }
+      )
+      .subscribe();
+
+    // Când utilizatorul închide pagina sau se deloghează, tăiem firul (cleanup)
+    return () => {
+      supabase.removeChannel(requestChannel);
+    };
+  }, [profile, refreshRequests, notifySuccess]);
 
   const value: AppContextType = {
     user,

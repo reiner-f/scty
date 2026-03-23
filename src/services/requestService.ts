@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Request, RequestStatus, UserProfile } from "@/types";
 
-// Mapare inteligentă a datelor relaționale
 function mapDbRequestToRequest(dbRequest: any): Request {
   return {
     id: dbRequest.id,
@@ -9,14 +8,13 @@ function mapDbRequestToRequest(dbRequest: any): Request {
     description: dbRequest.description || "",
     status: dbRequest.status as RequestStatus,
     municipalityId: dbRequest.municipality_id || "",
-    // Luăm numele din JOIN, dacă există, altfel fallback
     municipality: dbRequest.municipality || { name: "Necunoscut", cui: "-", locality: dbRequest.locality },
     contactPerson: {
-      name: dbRequest.contact_person,
-      email: dbRequest.contact_email,
-      phone: dbRequest.contact_phone,
+      name: dbRequest.contact_person || "",
+      email: dbRequest.contact_email || "",
+      phone: dbRequest.contact_phone || "",
     },
-    locality: dbRequest.locality,
+    locality: dbRequest.locality || "",
     serviceId: dbRequest.service_id || "",
     service: dbRequest.service || { name: "Serviciu Necunoscut" },
     providerId: dbRequest.provider_id || "",
@@ -29,15 +27,9 @@ function mapDbRequestToRequest(dbRequest: any): Request {
 
 export const requestService = {
   async fetchAll(profile: UserProfile | null): Promise<Request[]> {
-    // ⚠️ REPARAT: Folosim JOIN-uri native Supabase pentru a evita denormalizarea
     let query = supabase
       .from("requests")
-      .select(`
-        *,
-        municipality:municipalities(name, cui, locality),
-        provider:providers(name, cui),
-        service:services(name)
-      `)
+      .select(`*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)`)
       .order("created_at", { ascending: false });
 
     if (profile?.role === "primarie" && profile.entityId) {
@@ -47,28 +39,44 @@ export const requestService = {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error("❌ EROARE FETCH CERERI:", error);
+      throw error;
+    }
     return (data || []).map(mapDbRequestToRequest);
   },
 
   async create(request: Omit<Request, "id" | "createdAt" | "updatedAt">): Promise<Request> {
-    // ⚠️ REPARAT: Trimitem strict ID-urile, nu și numele (baza de date face restul)
+    // REPARAT: Ne asigurăm că string-urile goale ("") devin `null` pentru coloanele care sunt chei străine (UUID)
     const dbPayload = {
       title: request.title,
       description: request.description,
       status: request.status,
-      municipality_id: request.municipalityId,
+      municipality_id: request.municipalityId || null,
       contact_person: request.contactPerson.name,
       contact_email: request.contactPerson.email,
       contact_phone: request.contactPerson.phone,
       locality: request.locality,
-      service_id: request.serviceId,
-      provider_id: request.providerId,
+      // Dacă e string gol sau "none", trimitem null ca să nu crape baza de date
+      service_id: (request.serviceId && request.serviceId !== "none") ? request.serviceId : null,
+      provider_id: (request.providerId && request.providerId !== "none") ? request.providerId : null,
       estimated_start_date: request.estimatedStartDate || null,
     };
 
-    const { data, error } = await supabase.from("requests").insert([dbPayload]).select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)').single();
-    if (error) throw error;
+    console.log("Trimitem către Supabase:", dbPayload);
+
+    const { data, error } = await supabase
+      .from("requests")
+      .insert([dbPayload])
+      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
+      .single();
+      
+    if (error) {
+      // Acum vom vedea exact DE CE crapă baza de date direct în consola browserului
+      console.error("❌ EROARE CRITICĂ LA CREAREA CERERII:", error);
+      throw error;
+    }
+    
     return mapDbRequestToRequest(data);
   },
 
@@ -79,13 +87,25 @@ export const requestService = {
     if (updates.description) dbUpdates.description = updates.description;
     if (updates.estimatedStartDate !== undefined) dbUpdates.estimated_start_date = updates.estimatedStartDate;
 
-    const { data, error } = await supabase.from("requests").update(dbUpdates).eq("id", id).select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)').single();
-    if (error) throw error;
+    const { data, error } = await supabase
+      .from("requests")
+      .update(dbUpdates)
+      .eq("id", id)
+      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
+      .single();
+      
+    if (error) {
+      console.error("❌ EROARE LA UPDATE:", error);
+      throw error;
+    }
     return mapDbRequestToRequest(data);
   },
 
   async delete(id: string): Promise<void> {
     const { error } = await supabase.from("requests").delete().eq("id", id);
-    if (error) throw error;
+    if (error) {
+      console.error("❌ EROARE LA ȘTERGERE:", error);
+      throw error;
+    }
   }
 };
