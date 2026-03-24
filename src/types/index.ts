@@ -1,11 +1,14 @@
 export type RequestStatus = "accepted" | "rejected" | "pending";
 
+// Găsește interfața Municipality și actualizeaz-o așa:
 export interface Municipality {
   id: string;
   name: string;
   cui: string;
   contactPerson: { name: string; email: string; phone: string; };
   locality: string;
+  isBlocked?: boolean; // <-- NOU
+  blockReason?: string; // <-- NOU
 }
 
 export interface Provider {

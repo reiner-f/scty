@@ -5,11 +5,15 @@ import { Municipality } from "@/types";
 type DbMunicipality = Database["public"]["Tables"]["municipalities"]["Row"];
 type DbMunicipalityInsert = Database["public"]["Tables"]["municipalities"]["Insert"];
 
-function mapDbMunicipalityToMunicipality(db: DbMunicipality): Municipality {
+function mapDbMunicipalityToMunicipality(db: DbMunicipality | any): Municipality {
   return {
-    id: db.id, name: db.name, cui: db.cui,
+    id: db.id, 
+    name: db.name, 
+    cui: db.cui,
     contactPerson: { name: db.contact_person, email: db.email, phone: db.phone },
     locality: db.locality,
+    isBlocked: db.is_blocked || false, // <-- NOU
+    blockReason: db.block_reason || undefined, // <-- NOU
   };
 }
 

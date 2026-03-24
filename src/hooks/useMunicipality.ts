@@ -28,7 +28,7 @@ export function useMunicipality(profile: UserProfile | null) {
             .single();
             
           if (data && !error) {
-            setMunicipality({
+           setMunicipality({
               id: data.id,
               name: data.name,
               cui: data.cui,
@@ -38,6 +38,8 @@ export function useMunicipality(profile: UserProfile | null) {
                 phone: data.phone,
               },
               locality: data.locality,
+              isBlocked: data.is_blocked, // NOU
+              blockReason: data.block_reason, // NOU
             });
           }
         } catch (err) {
