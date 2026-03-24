@@ -8,9 +8,8 @@ import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { authService } from "@/services/authService";
 import { useApp } from "@/context/AppContext";
+import { NetworkBackground } from "@/components/layout/NetworkBackground"; // <-- Importul noului fundal
 
-// ⚠️ REPARAT: Conturile de test au fost golite pentru producție. 
-// Utilizatorul trebuie să își scrie manual parola reală din motive de securitate.
 const DEMO_ACCOUNTS = {
   admin: { email: "admin@centria.ro", password: "" },
   primarie: { email: "primarie@centria.ro", password: "" },
@@ -53,8 +52,6 @@ export function Login() {
     setEmail(acc.email);
     setPassword(acc.password);
     
-    // Dacă am setat o parolă în DEMO_ACCOUNTS, facem login instant.
-    // Altfel, doar completăm email-ul și lăsăm utilizatorul să scrie parola.
     if (acc.password) {
       performLogin(acc.email, acc.password);
     } else {
@@ -63,13 +60,20 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-sky-50">
+    // Părintele a devenit "relative" și "overflow-hidden"
+    <div className="min-h-screen relative flex items-center justify-center p-4 bg-slate-50 overflow-hidden">
+      
+      {/* MAGIA AICI: Componenta animată pe fundal */}
+      <NetworkBackground />
+
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md"
+        // Cardul trebuie să fie relative și z-10 pentru a sta PESTE animație
+        className="w-full max-w-md relative z-10"
       >
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl shadow-sky-100 overflow-hidden">
+        {/* Am modificat bg-white în bg-white/85 și am adăugat backdrop-blur-xl pentru un efect premium corporatist */}
+        <div className="bg-white/85 backdrop-blur-xl border border-white/40 rounded-3xl shadow-2xl shadow-sky-900/10 overflow-hidden">
           <div className="p-8">
             {/* Branding */}
             <div className="flex flex-col items-center mb-10">
@@ -77,7 +81,7 @@ export function Login() {
                 <Building2 className="w-10 h-10 text-white" />
               </div>
               <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Centria</h1>
-              <p className="text-slate-500 font-medium">Administrație Publică Inteligentă</p>
+              <p className="text-slate-500 font-medium text-center">Administrație Publică Inteligentă</p>
             </div>
 
             {/* Formularul Clasic */}
@@ -129,7 +133,7 @@ export function Login() {
             </form>
 
             {/* Secțiunea de Completare Rapidă (Quick Fill) */}
-            <div className="mt-8 pt-6 border-t border-slate-100">
+            <div className="mt-8 pt-6 border-t border-slate-200/60">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-4">
                 Completare Rapidă Email
               </p>
@@ -141,7 +145,7 @@ export function Login() {
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("admin")}
-                  className="flex flex-col gap-1 py-3 h-auto"
+                  className="flex flex-col gap-1 py-3 h-auto bg-white/50 hover:bg-white"
                 >
                   <ShieldCheck className="w-5 h-5 text-purple-600" />
                   <span className="text-xs">Admin</span>
@@ -153,7 +157,7 @@ export function Login() {
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("primarie")}
-                  className="flex flex-col gap-1 py-3 h-auto"
+                  className="flex flex-col gap-1 py-3 h-auto bg-white/50 hover:bg-white"
                 >
                   <Building className="w-5 h-5 text-sky-600" />
                   <span className="text-xs">Primărie</span>
@@ -165,7 +169,7 @@ export function Login() {
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("furnizor")}
-                  className="flex flex-col gap-1 py-3 h-auto"
+                  className="flex flex-col gap-1 py-3 h-auto bg-white/50 hover:bg-white"
                 >
                   <Briefcase className="w-5 h-5 text-emerald-600" />
                   <span className="text-xs">Furnizor</span>
