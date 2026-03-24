@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { AnimatePresence } from "motion/react";
+import { FileQuestion } from "lucide-react";
 import { RequestCard } from "../dashboard/RequestCard";
 import { RequestDetailModal } from "./RequestDetailModal";
 import { EditRequestModal } from "./EditRequestModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { Request, RequestStatus } from "@/types";
 import { useApp } from "@/context/AppContext";
+import { RequestCardSkeleton } from "@/components/common/Skeleton";
+import { EmptyState } from "@/components/common/EmptyState";
 
-// 1. Am definit clar ce "Props" poate primi această componentă
 interface RequestListProps {
   requests: Request[];
   title?: string;
@@ -16,7 +18,7 @@ interface RequestListProps {
 }
 
 export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: RequestListProps) {
-  const { updateRequest, deleteRequest } = useApp();
+  const { updateRequest, deleteRequest, isLoadingRequests } = useApp();
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [modalState, setModalState] = useState<{ type: 'detail' | 'edit' | 'delete' | null }>({ type: null });
 
@@ -36,15 +38,32 @@ export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: R
 
   return (
     <div className="space-y-4">
-      {title && <h2 className="text-xl font-bold text-slate-800">{title} ({requests.length})</h2>}
+      {/* Ascundem numărul de cereri cât timp se încarcă */}
+      {title && (
+        <h2 className="text-xl font-bold text-slate-800">
+          {title} {!isLoadingRequests && requests.length > 0 && `(${requests.length})`}
+        </h2>
+      )}
       
-      {/* 2. Tratăm cazul în care lista este goală */}
-      {requests.length === 0 && emptyMessage ? (
-        <div className="p-8 text-center bg-white border border-slate-200 rounded-xl text-slate-500">
-          {emptyMessage}
+      {isLoadingRequests ? (
+        <div className="flex flex-col gap-3">
+          {/* 1. Starea de Încărcare (Skeleton Loaders) */}
+          <RequestCardSkeleton />
+          <RequestCardSkeleton />
+          <RequestCardSkeleton />
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm">
+          {/* 2. Starea Goală (Empty State Premium) */}
+          <EmptyState 
+            icon={FileQuestion}
+            title="Nicio cerere găsită"
+            description={emptyMessage || "Nu există nicio cerere înregistrată care să corespundă criteriilor curente."}
+          />
         </div>
       ) : (
         <div className="flex flex-col gap-3">
+          {/* 3. Starea cu Date (Lista animată) */}
           <AnimatePresence mode="popLayout">
             {requests.map((req, index) => (
               <RequestCard
@@ -60,11 +79,11 @@ export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: R
         </div>
       )}
 
+      {/* Modale */}
       <RequestDetailModal 
         isOpen={modalState.type === 'detail'} 
         request={selectedRequest} 
         onClose={closeModals}
-        // 3. Pasăm onUpdateStatus mai departe către modal
         onUpdateStatus={onUpdateStatus}
       />
 

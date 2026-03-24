@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { 
   ShieldCheck, Users, Building, Briefcase, FileText, 
-  Loader2, Key, Eye, Trash2, AlertTriangle, Pencil, Plus, Ban, CheckCircle
+  Key, Eye, Trash2, AlertTriangle, Pencil, Plus, Ban, CheckCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/common/Button";
@@ -14,6 +14,7 @@ import { fetchAllMunicipalities, createMunicipality } from "@/services/municipal
 import { adminService, AdminUserView } from "@/services/adminService";
 import { RequestList } from "@/components/requests/RequestList";
 import { Municipality, Provider, AppRole, RequestStatus } from "@/types";
+import { TableSkeleton } from "@/components/common/Skeleton";
 
 type TabType = 'cereri' | 'utilizatori' | 'primarii' | 'furnizori';
 type ModalAction = 'detail' | 'editUser' | 'deleteUser' | 'password' | 'addMun' | 'editMun' | 'addProv' | 'editProv' | 'deleteEntity' | 'blockMun' | 'viewRequests' | null;
@@ -87,7 +88,9 @@ export function AdminDashboard() {
       {/* TAB UTILIZATORI */}
       {activeTab === 'utilizatori' && (
         <div className="bg-white rounded-2xl border border-slate-100 overflow-x-auto shadow-sm">
-          {isLoadingExtra ? <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div> : (
+          {isLoadingExtra ? (
+            <TableSkeleton columns={4} rows={6} />
+          ) : (
             <table className="w-full text-left min-w-[900px]">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr><th className="p-5 text-sm text-slate-600 uppercase">Email Utilizator</th><th className="p-5 text-sm text-slate-600 uppercase">Rol Functional</th><th className="p-5 text-sm text-slate-600 uppercase">Instituție Asociată</th><th className="p-5 text-right uppercase text-slate-600">Acțiuni Profil</th></tr>
@@ -122,30 +125,37 @@ export function AdminDashboard() {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
-            <table className="w-full text-left min-w-[800px]">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr><th className="p-5 text-xs text-slate-500 uppercase">Instituție</th><th className="p-5 text-xs text-slate-500 uppercase">Contact</th><th className="p-5 text-xs text-slate-500 uppercase text-center">Status Cont</th><th className="p-5 text-right text-xs text-slate-500 uppercase">Acțiuni Moderație</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {municipalities.map(m => (
-                  <tr key={m.id} className={m.isBlocked ? "bg-rose-50/50" : "hover:bg-slate-50"}>
-                    <td className="p-5"><div className="font-bold text-slate-900 text-lg">{m.name}</div><div className="text-xs font-mono mt-1 text-slate-500">CUI: {m.cui}</div></td>
-                    <td className="p-5"><div className="text-sm font-semibold">{m.contactPerson.name}</div><div className="text-xs text-slate-500">{m.contactPerson.phone}</div></td>
-                    <td className="p-5 text-center">
-                      {m.isBlocked ? <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs font-bold"><Ban className="w-3 h-3"/> Suspendat</span> : <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold"><CheckCircle className="w-3 h-3"/> Activ</span>}
-                    </td>
-                    <td className="p-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button onClick={() => { setSelectedEntity(m); setModalType('viewRequests'); }} className="p-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg text-xs font-bold flex items-center gap-1" title="Vezi & Gestionează Cereri"><Eye className="w-4 h-4"/> Cereri</button>
-                        <button onClick={() => { setSelectedEntity(m); setModalType('editMun'); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg" title="Editează Date"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => { setSelectedEntity(m); setModalType('blockMun'); }} className={`p-2 rounded-lg ${m.isBlocked ? "text-emerald-600 hover:bg-emerald-100" : "text-rose-600 hover:bg-rose-100"}`} title={m.isBlocked ? "Deblochează" : "Blochează Acces"}>{m.isBlocked ? <CheckCircle className="w-4 h-4"/> : <Ban className="w-4 h-4" />}</button>
-                        <button onClick={() => { setSelectedEntity(m); setModalType('deleteEntity'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg" title="Șterge Entitate"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {isLoadingExtra ? (
+              <TableSkeleton columns={4} rows={5} />
+            ) : (
+              <table className="w-full text-left min-w-[800px]">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr><th className="p-5 text-xs text-slate-500 uppercase">Instituție</th><th className="p-5 text-xs text-slate-500 uppercase">Contact</th><th className="p-5 text-xs text-slate-500 uppercase text-center">Status Cont</th><th className="p-5 text-right text-xs text-slate-500 uppercase">Acțiuni Moderație</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {municipalities.map(m => (
+                    <tr key={m.id} className={m.isBlocked ? "bg-rose-50/50" : "hover:bg-slate-50"}>
+                      <td className="p-5"><div className="font-bold text-slate-900 text-lg">{m.name}</div><div className="text-xs font-mono mt-1 text-slate-500">CUI: {m.cui}</div></td>
+                      <td className="p-5"><div className="text-sm font-semibold">{m.contactPerson.name}</div><div className="text-xs text-slate-500">{m.contactPerson.phone}</div></td>
+                      <td className="p-5 text-center">
+                        {m.isBlocked ? <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs font-bold"><Ban className="w-3 h-3"/> Suspendat</span> : <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold"><CheckCircle className="w-3 h-3"/> Activ</span>}
+                      </td>
+                      <td className="p-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => { setSelectedEntity(m); setModalType('viewRequests'); }} className="p-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg text-xs font-bold flex items-center gap-1" title="Vezi & Gestionează Cereri"><Eye className="w-4 h-4"/> Cereri</button>
+                          <button onClick={() => { setSelectedEntity(m); setModalType('editMun'); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg" title="Editează Date"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => { setSelectedEntity(m); setModalType('blockMun'); }} className={`p-2 rounded-lg ${m.isBlocked ? "text-emerald-600 hover:bg-emerald-100" : "text-rose-600 hover:bg-rose-100"}`} title={m.isBlocked ? "Deblochează" : "Blochează Acces"}>{m.isBlocked ? <CheckCircle className="w-4 h-4"/> : <Ban className="w-4 h-4" />}</button>
+                          <button onClick={() => { setSelectedEntity(m); setModalType('deleteEntity'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg" title="Șterge Entitate"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {municipalities.length === 0 && (
+                    <tr><td colSpan={4} className="p-16 text-center text-slate-500 font-medium">Nu există primării înregistrate în sistem.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
@@ -159,32 +169,38 @@ export function AdminDashboard() {
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
-            <table className="w-full text-left min-w-[600px]">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr><th className="p-5 text-xs text-slate-500 uppercase">Companie</th><th className="p-5 text-xs text-slate-500 uppercase">CUI</th><th className="p-5 text-right text-xs text-slate-500 uppercase">Acțiuni</th></tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {adminProviders.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50">
-                    <td className="p-5 font-bold text-slate-900">{p.name}</td>
-                    <td className="p-5 font-mono text-sm text-slate-500">{p.cui}</td>
-                    <td className="p-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button onClick={() => { setSelectedEntity(p); setModalType('editProv'); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => { setSelectedEntity(p); setModalType('deleteEntity'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {isLoadingExtra ? (
+              <TableSkeleton columns={3} rows={5} />
+            ) : (
+              <table className="w-full text-left min-w-[600px]">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr><th className="p-5 text-xs text-slate-500 uppercase">Companie</th><th className="p-5 text-xs text-slate-500 uppercase">CUI</th><th className="p-5 text-right text-xs text-slate-500 uppercase">Acțiuni</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {adminProviders.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50">
+                      <td className="p-5 font-bold text-slate-900">{p.name}</td>
+                      <td className="p-5 font-mono text-sm text-slate-500">{p.cui}</td>
+                      <td className="p-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => { setSelectedEntity(p); setModalType('editProv'); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => { setSelectedEntity(p); setModalType('deleteEntity'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {adminProviders.length === 0 && (
+                    <tr><td colSpan={3} className="p-16 text-center text-slate-500 font-medium">Nu există furnizori înregistrați în sistem.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
 
       {/* ================= MODALE ================= */}
       
-      {/* Vizualizare Cereri Specifice pentru Primărie */}
       <Modal isOpen={modalType === 'viewRequests'} onClose={() => setModalType(null)} title={`Cereri: ${selectedEntity?.name}`} size="xl">
          <div className="bg-slate-50 p-4 -mx-6 -my-2 min-h-[500px]">
            {selectedEntity && (
@@ -197,19 +213,16 @@ export function AdminDashboard() {
          </div>
       </Modal>
 
-      {/* Blocare Primărie */}
       <Modal isOpen={modalType === 'blockMun'} onClose={() => setModalType(null)} size="sm">
          {selectedEntity && 'locality' in selectedEntity && (
            <FormBlockMunicipality entity={selectedEntity as Municipality} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
          )}
       </Modal>
 
-      {/* Ștergere Entitate (Primărie/Furnizor) */}
       <Modal isOpen={modalType === 'deleteEntity'} onClose={() => setModalType(null)} size="sm">
          <FormDeleteEntity entity={selectedEntity} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
       </Modal>
 
-      {/* Restul modalelor clasice */}
       <Modal isOpen={modalType === 'addMun'} onClose={() => setModalType(null)} title="Înregistrare Primărie" size="md">
         <FormAddMunicipality onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
       </Modal>
@@ -301,21 +314,41 @@ function FormDeleteEntity({ entity, onComplete, onCancel }: { entity: Municipali
     if (!entity) return;
     setLoading(true);
     try {
+      // 1. Tăiem legăturile: Îi lăsăm fără "entity_id" pe toți utilizatorii acestei entități
+      // Trimițând doar entity_id: null, evităm eroarea 400 legată de restricțiile coloanei "role"
+      await supabase
+        .from('user_profiles')
+        .update({ entity_id: null })
+        .eq('entity_id', entity.id);
+
+      // 2. Ștergem entitatea (Cererile asociate se vor șterge automat în cascadă)
       const table = 'locality' in entity ? 'municipalities' : 'providers';
       const { error } = await supabase.from(table).delete().eq('id', entity.id);
+      
       if (error) throw error;
+      
       notifySuccess("Entitatea a fost ștearsă definitiv!");
       onComplete();
-    } catch (err: any) { notifyError("Eroare la ștergere. Asigurați-vă că nu există utilizatori blocați pe această entitate."); }
+    } catch (err: any) { 
+      console.error("Detalii eroare ștergere:", err);
+      notifyError(err.message || "Eroare la ștergere. Verificați consola."); 
+    }
     finally { setLoading(false); }
   };
 
   return (
     <div className="flex flex-col items-center text-center pt-2">
-      <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mb-5"><Trash2 className="w-8 h-8 text-rose-600" /></div>
-      <h3 className="text-2xl font-bold text-slate-950 mb-2">Ștergere Instituție</h3>
-      <p className="text-slate-600 mb-8 text-sm">Sigur vrei să ștergi <strong>{entity?.name}</strong>? Toate cererile asociate vor fi șterse automat!</p>
-      <div className="flex gap-3 w-full"><Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Anulează</Button><Button type="button" variant="danger" className="flex-1" onClick={submit} isLoading={loading}>Șterge</Button></div>
+      <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mb-5">
+        <Trash2 className="w-8 h-8 text-rose-600" />
+      </div>
+      <h3 className="text-2xl font-bold text-slate-950 mb-2">Ștergere Definitivă</h3>
+      <p className="text-slate-600 mb-8 text-sm">
+        Sigur vrei să ștergi <strong>{entity?.name}</strong>? Conturile utilizatorilor asociați vor fi detașate (fără acces), iar cererile înregistrate vor fi șterse!
+      </p>
+      <div className="flex gap-3 w-full">
+        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Anulează</Button>
+        <Button type="button" variant="danger" className="flex-1" onClick={submit} isLoading={loading}>Confirmă Ștergerea</Button>
+      </div>
     </div>
   );
 }
