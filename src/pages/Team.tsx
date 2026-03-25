@@ -1,47 +1,42 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { ArrowLeft, Linkedin, Code, LayoutTemplate, Database, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Linkedin } from "lucide-react";
 import { Button } from "@/components/common/Button";
 import { NetworkBackground } from "@/components/layout/NetworkBackground";
 
-// Datele echipei (poți modifica numele și descrierile cum dorești)
 const TEAM_MEMBERS = [
   {
     id: 1,
-    name: "Alexandru Popescu",
+    name: "Balan Ionuț",
     role: "Frontend Architect",
     description: "A creat interfața premium, animațiile fluide și experiența utilizatorului (UX) folosind React și Tailwind CSS.",
-    icon: LayoutTemplate,
+    imageUrl: "https://ui-avatars.com/api/?name=Balan+Ionut&background=e2e8f0&color=475569&size=512",
     linkedin: "https://linkedin.com",
-    color: "from-sky-400 to-blue-500"
   },
   {
     id: 2,
-    name: "Mihai Ionescu",
+    name: "Stanichevici Victor",
     role: "Backend Developer",
     description: "A proiectat arhitectura bazei de date în Supabase, securitatea (RLS) și logica de sincronizare în timp real.",
-    icon: Database,
+    imageUrl: "https://ui-avatars.com/api/?name=Stanichevici+Victor&background=e2e8f0&color=475569&size=512",
     linkedin: "https://linkedin.com",
-    color: "from-indigo-400 to-purple-500"
   },
   {
     id: 3,
-    name: "Elena Radu",
+    name: "Varvaroi Dalia",
     role: "Fullstack Engineer",
     description: "A integrat funcționalitățile complexe de filtrare, sistemul de roluri și serviciile de autentificare.",
-    icon: Code,
+    imageUrl: "https://ui-avatars.com/api/?name=Varvaroi+Dalia&background=e2e8f0&color=475569&size=512",
     linkedin: "https://linkedin.com",
-    color: "from-emerald-400 to-teal-500"
   },
   {
     id: 4,
-    name: "Andrei Dumitrescu",
+    name: "Curcă Maria-Codrina",
     role: "Security & QA",
     description: "S-a asigurat că platforma este impenetrabilă, gestionând permisiunile și testând riguros fiecare flux.",
-    icon: ShieldCheck,
+    imageUrl: "https://ui-avatars.com/api/?name=Curca+Maria-Codrina&background=e2e8f0&color=475569&size=512",
     linkedin: "https://linkedin.com",
-    color: "from-rose-400 to-orange-500"
   }
 ];
 
@@ -51,17 +46,15 @@ export function Team() {
   return (
     <div className="min-h-screen relative bg-gradient-to-br from-sky-950 via-sky-900 to-slate-900 overflow-hidden selection:bg-sky-500/30">
       
-      {/* Fundalul animat */}
+      {/* Fundalul animat cu rețeaua */}
       <NetworkBackground />
 
-      {/* Butonul de Întoarcere - Poziționat sus, în afara fluxului */}
+      {/* Butonul de Întoarcere */}
       <div className="relative z-20 pt-8 px-6 md:px-12">
         <Button 
-          variant="outline" 
-          // navigate(-1) te întoarce fix la pagina anterioară
           onClick={() => navigate(-1)} 
           leftIcon={<ArrowLeft className="w-5 h-5" />}
-          className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-md"
+          className="bg-[#0a66c2] hover:bg-[#004182] text-white border-transparent shadow-lg transition-colors"
         >
           Înapoi la platformă
         </Button>
@@ -70,58 +63,86 @@ export function Team() {
       {/* Conținutul Principal */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-4 py-12">
         
+        {/* Grid-ul "Checkerboard" */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.6, delay: 0.2 }}
+          // Toate elementele din grilă vor fi forțate să fie pătrate prin "aspect-square" pe copiii lor
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 w-full max-w-6xl mx-auto shadow-2xl rounded-sm overflow-hidden border border-white/10"
         >
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4 drop-shadow-md">
-            Echipa <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-blue-400">Centria</span>
-          </h1>
-          <p className="text-sky-200 text-lg max-w-xl mx-auto font-medium">
-            Oamenii pasionați care au transformat viziunea unei administrații publice digitale în realitate.
-          </p>
+          {/* ----- RÂNDUL 1 ----- */}
+          
+          {/* Membru 1: Poză (Stânga sus) */}
+          <div className="aspect-square bg-slate-200 relative overflow-hidden group">
+            <img src={TEAM_MEMBERS[0].imageUrl} alt={TEAM_MEMBERS[0].name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+          </div>
+          
+          {/* Membru 1: Text (Culoare LinkedIn: #0a66c2) */}
+          <div className="aspect-square bg-[#0a66c2] text-white p-6 sm:p-8 flex flex-col justify-center relative">
+            <div className="hidden lg:block absolute top-10 -left-3 w-6 h-6 bg-[#0a66c2] rotate-45"></div>
+            
+            <h3 className="text-xl sm:text-2xl font-bold mb-1">{TEAM_MEMBERS[0].name}</h3>
+            {/* Folosim un albastru foarte deschis pentru rol, ca să iasă în evidență pe fundalul LinkedIn */}
+            <p className="text-sky-100 font-medium mb-3 sm:mb-4">{TEAM_MEMBERS[0].role}</p>
+            <p className="text-white/90 text-xs sm:text-sm leading-relaxed mb-4 sm:mb-6 flex-1">{TEAM_MEMBERS[0].description}</p>
+            <a href={TEAM_MEMBERS[0].linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 w-fit text-white hover:text-sky-200 transition-colors">
+              <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="text-xs sm:text-sm font-semibold">LinkedIn</span>
+            </a>
+          </div>
+
+          {/* Membru 2: Poză */}
+          <div className="aspect-square bg-slate-200 relative overflow-hidden group">
+            <img src={TEAM_MEMBERS[1].imageUrl} alt={TEAM_MEMBERS[1].name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+          </div>
+          
+          {/* Membru 2: Text (Alb) */}
+          <div className="aspect-square bg-white text-slate-800 p-6 sm:p-8 flex flex-col justify-center relative">
+             <div className="hidden lg:block absolute top-10 -left-3 w-6 h-6 bg-white rotate-45"></div>
+
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">{TEAM_MEMBERS[1].name}</h3>
+            <p className="text-slate-500 font-medium mb-3 sm:mb-4">{TEAM_MEMBERS[1].role}</p>
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-4 sm:mb-6 flex-1">{TEAM_MEMBERS[1].description}</p>
+            <a href={TEAM_MEMBERS[1].linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 w-fit text-slate-400 hover:text-[#0a66c2] transition-colors">
+              <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="text-xs sm:text-sm font-semibold">LinkedIn</span>
+            </a>
+          </div>
+
+          {/* ----- RÂNDUL 2 ----- */}
+          
+          {/* Membru 3: Text (Alb) */}
+          <div className="aspect-square bg-white text-slate-800 p-6 sm:p-8 flex flex-col justify-center relative order-last md:order-none lg:order-none">
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">{TEAM_MEMBERS[2].name}</h3>
+            <p className="text-slate-500 font-medium mb-3 sm:mb-4">{TEAM_MEMBERS[2].role}</p>
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-4 sm:mb-6 flex-1">{TEAM_MEMBERS[2].description}</p>
+            <a href={TEAM_MEMBERS[2].linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 w-fit text-slate-400 hover:text-[#0a66c2] transition-colors">
+              <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="text-xs sm:text-sm font-semibold">LinkedIn</span>
+            </a>
+          </div>
+
+          {/* Membru 3: Poză */}
+          <div className="aspect-square bg-slate-200 relative overflow-hidden group">
+            <img src={TEAM_MEMBERS[2].imageUrl} alt={TEAM_MEMBERS[2].name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+            <div className="hidden lg:block absolute top-10 -left-3 w-6 h-6 bg-white rotate-45 z-10"></div>
+          </div>
+
+          {/* Membru 4: Text (Culoare LinkedIn: #0a66c2) */}
+          <div className="aspect-square bg-[#0a66c2] text-white p-6 sm:p-8 flex flex-col justify-center relative order-last md:order-none lg:order-none">
+            <h3 className="text-xl sm:text-2xl font-bold mb-1">{TEAM_MEMBERS[3].name}</h3>
+            <p className="text-sky-100 font-medium mb-3 sm:mb-4">{TEAM_MEMBERS[3].role}</p>
+            <p className="text-white/90 text-xs sm:text-sm leading-relaxed mb-4 sm:mb-6 flex-1">{TEAM_MEMBERS[3].description}</p>
+            <a href={TEAM_MEMBERS[3].linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 w-fit text-white hover:text-sky-200 transition-colors">
+              <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="text-xs sm:text-sm font-semibold">LinkedIn</span>
+            </a>
+          </div>
+
+          {/* Membru 4: Poză */}
+          <div className="aspect-square bg-slate-200 relative overflow-hidden group">
+            <img src={TEAM_MEMBERS[3].imageUrl} alt={TEAM_MEMBERS[3].name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+            <div className="hidden lg:block absolute top-10 -left-3 w-6 h-6 bg-[#0a66c2] rotate-45 z-10"></div>
+          </div>
+
         </motion.div>
-
-        {/* Grid-ul cu Carduri */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto w-full">
-          {TEAM_MEMBERS.map((member, index) => {
-            const Icon = member.icon;
-            return (
-              <motion.div
-                key={member.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 shadow-2xl hover:bg-white/15 transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2"
-              >
-                {/* Iconița Rolului (Avatar) */}
-                <div className={`w-16 h-16 rounded-2xl mb-5 flex items-center justify-center bg-gradient-to-br ${member.color} shadow-lg shadow-black/20 group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className="w-8 h-8 text-white" />
-                </div>
-
-                <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
-                <p className="text-sm font-semibold text-sky-300 uppercase tracking-wider mb-4">{member.role}</p>
-                
-                <p className="text-sky-100/80 text-sm leading-relaxed mb-6 flex-1">
-                  {member.description}
-                </p>
-
-                {/* Buton LinkedIn */}
-                <a 
-                  href={member.linkedin} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="mt-auto w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-sky-600 hover:border-sky-500 transition-all duration-300 font-medium group/btn"
-                >
-                  <Linkedin className="w-5 h-5 text-sky-300 group-hover/btn:text-white transition-colors" />
-                  <span>Conectează-te</span>
-                </a>
-              </motion.div>
-            );
-          })}
-        </div>
 
       </div>
     </div>
