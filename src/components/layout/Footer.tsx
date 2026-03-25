@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Building2, ArrowUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Link } from "react-router-dom";
+
+// Importul oficial al logo-ului tău
+import logoImg from "@/assets/logo.png";
 
 export function Footer() {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  // Logica pentru afișarea butonului de "Sus" la scroll
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -36,29 +41,44 @@ export function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             
-            {/* Secțiunea Logo & Nume */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <span className="text-xl font-bold text-white tracking-wide block">
-                  Centria
-                </span>
-                <span className="text-sm text-sky-200">
+            {/* Partea Stângă: Logo și Branding */}
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <img 
+                src={logoImg} 
+                alt="Centria Logo" 
+                className="h-10 w-auto object-contain" 
+              />
+              <div className="text-center sm:text-left border-t sm:border-t-0 sm:border-l border-sky-500 pt-3 sm:pt-0 sm:pl-4 mt-1 sm:mt-0">
+                <span className="text-sm text-sky-200 block font-medium">
                   Administrație Publică
+                </span>
+                <span className="text-xs text-sky-300 block mt-0.5">
+                  Platformă inteligentă de management.
                 </span>
               </div>
             </div>
 
-            {/* Secțiunea Descriere */}
-            <p className="text-sm md:text-base text-sky-100 text-center md:text-right max-w-sm">
-              Platformă inteligentă de management al cererilor și resurselor administrative.
-            </p>
+            {/* Partea Dreaptă: Link-uri de Navigare */}
+            <div className="text-sm md:text-base text-sky-100 text-center md:text-right flex flex-wrap justify-center items-center gap-3">
+              <Link 
+                to="/team" 
+                className="hover:text-white font-medium transition-colors"
+              >
+                Echipa de Dezvoltare
+              </Link>
+              <span className="opacity-30">|</span>
+              <a href="#" className="hover:text-white transition-colors">
+                Suport Tehnic
+              </a>
+              <span className="hidden sm:inline opacity-30">|</span>
+              <a href="#" className="hidden sm:inline hover:text-white transition-colors">
+                Termeni și Condiții
+              </a>
+            </div>
           </div>
         </div>
 
-        {/* Secțiunea de Copyright curată */}
+        {/* Zona de Copyright */}
         <div className="border-t border-white/10 py-4 bg-black/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
             <p className="text-sm text-sky-200/70 text-center">
@@ -68,7 +88,7 @@ export function Footer() {
         </div>
       </footer>
 
-      {/* Butonul de Scroll to Top */}
+      {/* Butonul animat de Scroll to Top */}
       <AnimatePresence>
         {showScrollTop && (
           <motion.button

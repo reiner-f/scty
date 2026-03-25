@@ -1,14 +1,17 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
 import { 
-  Building2, Mail, Lock, LogIn, AlertCircle, 
+  Mail, Lock, LogIn, AlertCircle, 
   ShieldCheck, Building, Briefcase 
 } from "lucide-react";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { authService } from "@/services/authService";
 import { useApp } from "@/context/AppContext";
-import { NetworkBackground } from "@/components/layout/NetworkBackground"; // <-- Importul noului fundal
+import { NetworkBackground } from "@/components/layout/NetworkBackground";
+
+// Importul logoului tău
+import logoImg from "@/assets/logo.png"; 
 
 const DEMO_ACCOUNTS = {
   admin: { email: "admin@centria.ro", password: "" },
@@ -60,40 +63,44 @@ export function Login() {
   };
 
   return (
-    // Părintele a devenit "relative" și "overflow-hidden"
-    <div className="min-h-screen relative flex items-center justify-center p-4 bg-slate-50 overflow-hidden">
+    // Fundalul paginii primește același gradient ca header-ul pentru continuitate vizuală
+    <div className="min-h-screen relative flex items-center justify-center p-4 bg-gradient-to-br from-sky-900 via-sky-700 to-sky-600 overflow-hidden">
       
-      {/* MAGIA AICI: Componenta animată pe fundal */}
+      {/* Rețeaua din fundal */}
       <NetworkBackground />
 
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        // Cardul trebuie să fie relative și z-10 pentru a sta PESTE animație
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        // Card compact (max-w-md), garantează vizibilitatea totală fără scroll
         className="w-full max-w-md relative z-10"
       >
-        {/* Am modificat bg-white în bg-white/85 și am adăugat backdrop-blur-xl pentru un efect premium corporatist */}
-        <div className="bg-white/85 backdrop-blur-xl border border-white/40 rounded-3xl shadow-2xl shadow-sky-900/10 overflow-hidden">
-          <div className="p-8">
-            {/* Branding */}
-            <div className="flex flex-col items-center mb-10">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 mb-4">
-                <Building2 className="w-10 h-10 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Centria</h1>
-              <p className="text-slate-500 font-medium text-center">Administrație Publică Inteligentă</p>
-            </div>
+        {/* Cardul principal: Fundal alb, margini rotunjite și o umbră spectaculoasă pentru adâncime */}
+        <div className="bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ring-1 ring-black/5">
+          
+          {/* HEADER CARD: Nuanța ta de albastru, cu efect de lumină subtil din partea de sus */}
+          <div className="relative bg-gradient-to-b from-sky-540 to-sky-800 py-8 px-6 flex flex-col items-center justify-center overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent opacity-70 pointer-events-none"></div>
+            
+            <img 
+              src={logoImg} 
+              alt="Logo" 
+              className="relative z-10 h-14 md:h-16 w-auto object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)] transition-transform duration-500 hover:scale-105" 
+            />
+          </div>
 
-            {/* Formularul Clasic */}
-            <form onSubmit={handleManualLogin} className="space-y-5">
+          {/* CORP FORMULAR: Alb curat, text închis la culoare, ușor de privit */}
+          <div className="p-6 md:px-8 md:py-8">
+            <form onSubmit={handleManualLogin} className="space-y-4">
               {error && (
                 <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 text-rose-700 text-sm"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="p-3 bg-rose-50 border border-rose-100 rounded-lg flex items-start gap-2.5 text-rose-700 text-sm overflow-hidden"
                 >
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="font-medium">{error}</span>
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="font-medium leading-tight">{error}</span>
                 </motion.div>
               )}
 
@@ -106,6 +113,7 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
                 required
+                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
               />
 
               <div className="space-y-1">
@@ -118,37 +126,39 @@ export function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
                   required
+                  className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full py-6 text-lg font-bold shadow-lg shadow-primary-100"
+                // Buton principal asortat cu headerul, efect fin de ridicare la hover
+                className="w-full py-3.5 text-base font-semibold shadow-md bg-sky-600 hover:bg-sky-700 text-white mt-4 transition-all duration-200 hover:shadow-lg hover:shadow-sky-600/30 hover:-translate-y-0.5"
                 isLoading={isLoading}
                 disabled={isLoading}
                 leftIcon={!isLoading && <LogIn className="w-5 h-5" />}
               >
-                {isLoading ? "Se verifică..." : "Intră în cont"}
+                {isLoading ? "Se verifică..." : "Autentificare"}
               </Button>
             </form>
 
             {/* Secțiunea de Completare Rapidă (Quick Fill) */}
-            <div className="mt-8 pt-6 border-t border-slate-200/60">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-4">
-                Completare Rapidă Email
-              </p>
+            <div className="mt-8 pt-6 border-t border-slate-100 relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Acces Rapid
+              </span>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-3">
                 <Button 
                   type="button" 
                   variant="outline" 
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("admin")}
-                  className="flex flex-col gap-1 py-3 h-auto bg-white/50 hover:bg-white"
+                  className="flex flex-col gap-1.5 py-3 bg-white hover:bg-sky-50 border-slate-200 hover:border-sky-300 transition-all duration-200 group"
                 >
-                  <ShieldCheck className="w-5 h-5 text-purple-600" />
-                  <span className="text-xs">Admin</span>
+                  <ShieldCheck className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-semibold text-slate-600 group-hover:text-sky-800">Admin</span>
                 </Button>
                 
                 <Button 
@@ -157,10 +167,10 @@ export function Login() {
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("primarie")}
-                  className="flex flex-col gap-1 py-3 h-auto bg-white/50 hover:bg-white"
+                  className="flex flex-col gap-1.5 py-3 bg-white hover:bg-sky-50 border-slate-200 hover:border-sky-300 transition-all duration-200 group"
                 >
-                  <Building className="w-5 h-5 text-sky-600" />
-                  <span className="text-xs">Primărie</span>
+                  <Building className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-semibold text-slate-600 group-hover:text-sky-800">Primărie</span>
                 </Button>
 
                 <Button 
@@ -169,10 +179,10 @@ export function Login() {
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("furnizor")}
-                  className="flex flex-col gap-1 py-3 h-auto bg-white/50 hover:bg-white"
+                  className="flex flex-col gap-1.5 py-3 bg-white hover:bg-sky-50 border-slate-200 hover:border-sky-300 transition-all duration-200 group"
                 >
-                  <Briefcase className="w-5 h-5 text-emerald-600" />
-                  <span className="text-xs">Furnizor</span>
+                  <Briefcase className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-semibold text-slate-600 group-hover:text-sky-800">Furnizor</span>
                 </Button>
               </div>
             </div>

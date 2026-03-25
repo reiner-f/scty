@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import { authService } from "./services/authService";
 import { Login } from "./pages/Login";
+import { Team } from "./pages/Team"; // Asigură-te că ai creat fișierul pages/Team.tsx
 import { Layout } from "./components/layout/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { CreateRequest } from "./pages/CreateRequest";
@@ -19,12 +20,9 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    // 1. O singură funcție sigură care face totul
     async function initAuth() {
       try {
-        // Aducem și sesiunea și profilul dintr-un singur foc
         const sessionData = await authService.getSession();
-        
         if (mounted) {
           if (sessionData) {
             setSession(sessionData);
@@ -37,19 +35,14 @@ function App() {
       } catch (error) {
         console.error("Eroare la inițializarea aplicației:", error);
       } finally {
-        // GARANTAT: Indiferent dacă e succes sau eroare, oprim loading-ul!
         if (mounted) setLoading(false);
       }
     }
 
-    // Rulăm la deschiderea / refresh-ul paginii
     initAuth();
 
-    // 2. Ascultăm DOAR evenimentele importante (Login / Logout din interfață)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (!mounted) return;
-
-      // Dacă Supabase ne anunță de un Refresh nativ, îl ignorăm pentru că îl tratează initAuth()
       if (event === 'INITIAL_SESSION') return;
 
       if (event === 'SIGNED_OUT') {
@@ -60,7 +53,6 @@ function App() {
         setLoading(true);
         initAuth();
       } else if (event === 'TOKEN_REFRESHED') {
-        // La reîmprospătarea tokenului, doar salvăm noua sesiune în fundal, nu blocăm ecranul
         setSession(newSession);
       }
     });
@@ -86,23 +78,41 @@ function App() {
   return (
     <BrowserRouter>
       <AppProvider user={session?.user} profile={profile}>
-        {!session ? (
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        ) : (
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              {profile?.role === 'primarie' && (
-                <Route path="/create-request" element={<CreateRequest />} />
-              )}
-              <Route path="/history" element={<RequestHistory />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Layout>
-        )}
+        <Routes>
+          {/* CAZ 1: Utilizator neautentificat */}
+          {!session ? (
+            <>
+              <Route path="/login" element={<Login />} />
+              {/* Permitem vizualizarea echipei chiar și fără login (opțional) */}
+              <Route path="/team" element={<Team />} /> 
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </>
+          ) : (
+            /* CAZ 2: Utilizator autentificat */
+            <>
+              {/* Ruta TEAM - FĂRĂ HEADER (este în afara Layout-ului) */}
+              <Route path="/team" element={<Team />} />
+
+              {/* Toate rutele care au nevoie de Header și Footer sunt grupate aici sub Layout */}
+              <Route
+                path="*"
+                element={
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      {profile?.role === "primarie" && (
+                        <Route path="/create-request" element={<CreateRequest />} />
+                      )}
+                      <Route path="/history" element={<RequestHistory />} />
+                      {/* Redirecționare către Dashboard pentru orice altă rută neexistentă */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </Layout>
+                }
+              />
+            </>
+          )}
+        </Routes>
       </AppProvider>
     </BrowserRouter>
   );

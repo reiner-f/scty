@@ -42,20 +42,25 @@ The content is organized as follows:
 <directory_structure>
 .gitignore
 App.tsx
+assets/cube.png
+assets/logo.png
 components/common/Badge.tsx
 components/common/Button.tsx
 components/common/Card.tsx
 components/common/Checkbox.tsx
+components/common/EmptyState.tsx
 components/common/Input.tsx
 components/common/Modal.tsx
 components/common/SearchBar.tsx
 components/common/Select.tsx
+components/common/Skeleton.tsx
 components/common/Textarea.tsx
 components/dashboard/RequestCard.tsx
 components/dashboard/StatsCard.tsx
 components/layout/Footer.tsx
 components/layout/Header.tsx
 components/layout/Layout.tsx
+components/layout/NetworkBackground.tsx
 components/notifications/NotificationContainer.tsx
 components/profile/ProfileModal.tsx
 components/requests/DeleteConfirmModal.tsx
@@ -81,6 +86,7 @@ pages/dashboards/FurnizorDashboard.tsx
 pages/dashboards/PrimarieDashboard.tsx
 pages/Login.tsx
 pages/RequestHistory.tsx
+pages/Team.tsx
 services/adminService.ts
 services/authService.ts
 services/municipalityService.ts
@@ -95,6 +101,269 @@ vite-env.d.ts
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="components/common/EmptyState.tsx">
+import React from 'react';
+import { LucideIcon } from 'lucide-react';
+import { Button } from './Button';
+
+interface EmptyStateProps {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  className?: string;
+}
+
+export function EmptyState({ 
+  icon: Icon, 
+  title, 
+  description, 
+  actionLabel, 
+  onAction,
+  className = '' 
+}: EmptyStateProps) {
+  return (
+    <div className={`flex flex-col items-center justify-center p-12 text-center w-full ${className}`}>
+      {/* Container-ul pentru Iconiță (Fundal subtil cu umbră fină) */}
+      <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mb-5 shadow-sm">
+        <Icon className="w-10 h-10 text-slate-400" strokeWidth={1.5} />
+      </div>
+      
+      {/* Titlu și Descriere */}
+      <h3 className="text-xl font-bold text-slate-900 mb-2">{title}</h3>
+      <p className="text-slate-500 max-w-sm mb-6 leading-relaxed">
+        {description}
+      </p>
+      
+      {/* Buton de acțiune opțional (se afișează doar dacă îi dăm text și funcție) */}
+      {actionLabel && onAction && (
+        <Button onClick={onAction} variant="primary" className="shadow-md hover:-translate-y-0.5 transition-transform">
+          {actionLabel}
+        </Button>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="components/common/Skeleton.tsx">
+import React from "react";
+import { classNames } from "@/utils/helpers";
+
+interface SkeletonProps {
+  className?: string;
+}
+
+// 1. Elementul de bază (un bloc gri care pulsează)
+export function Skeleton({ className }: SkeletonProps) {
+  return (
+    <div
+      className={classNames(
+        "animate-pulse bg-slate-200/60 rounded-md",
+        className
+      )}
+    />
+  );
+}
+
+// 2. Skeleton special pentru Tabele (Admin Dashboard)
+interface TableSkeletonProps {
+  rows?: number;
+  columns?: number;
+}
+
+export function TableSkeleton({ rows = 5, columns = 4 }: TableSkeletonProps) {
+  return (
+    <div className="w-full">
+      {/* Header-ul Tabelului (Nu pulsează, dă structură) */}
+      <div className="bg-slate-50 border-b border-slate-200 flex items-center px-5 py-4">
+        {Array.from({ length: columns }).map((_, i) => (
+          <div key={`th-${i}`} className="flex-1">
+            <Skeleton className="h-4 w-24 bg-slate-300/50" />
+          </div>
+        ))}
+      </div>
+
+      {/* Rândurile Tabelului (Pulsează) */}
+      <div className="divide-y divide-slate-100 bg-white">
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <div key={`tr-${rowIndex}`} className="flex items-center px-5 py-5">
+            {Array.from({ length: columns }).map((_, colIndex) => (
+              <div key={`td-${rowIndex}-${colIndex}`} className="flex-1 pr-4">
+                {/* Variază lățimea scheletelor pentru a părea date reale (ex: unele scurte, altele lungi) */}
+                <Skeleton 
+                  className={classNames(
+                    "h-4",
+                    colIndex === columns - 1 ? "w-8 ml-auto" : // Ultimul element (Acțiuni) e mic și aliniat la dreapta
+                    (rowIndex + colIndex) % 2 === 0 ? "w-3/4" : "w-1/2" // Lățimi aleatorii
+                  )} 
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// 3. Skeleton special pentru Lista de Cereri (Carduri)
+export function RequestCardSkeleton() {
+  return (
+    <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+      <div className="flex justify-between items-start mb-4">
+        <div className="space-y-3 w-2/3">
+          <Skeleton className="h-5 w-3/4" /> {/* Titlu */}
+          <Skeleton className="h-4 w-1/2" /> {/* Primărie / Furnizor */}
+        </div>
+        <Skeleton className="h-6 w-24 rounded-full" /> {/* Status Badge */}
+      </div>
+      <div className="space-y-2 mb-5">
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-5/6" />
+      </div>
+      <div className="flex justify-between items-center pt-4 border-t border-slate-50">
+        <Skeleton className="h-4 w-32" /> {/* Dată */}
+        <Skeleton className="h-8 w-24 rounded-lg" /> {/* Buton Acțiune */}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="pages/Team.tsx">
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
+import { ArrowLeft, Linkedin, Code, LayoutTemplate, Database, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/common/Button";
+import { NetworkBackground } from "@/components/layout/NetworkBackground";
+
+// Datele echipei (poți modifica numele și descrierile cum dorești)
+const TEAM_MEMBERS = [
+  {
+    id: 1,
+    name: "Alexandru Popescu",
+    role: "Frontend Architect",
+    description: "A creat interfața premium, animațiile fluide și experiența utilizatorului (UX) folosind React și Tailwind CSS.",
+    icon: LayoutTemplate,
+    linkedin: "https://linkedin.com",
+    color: "from-sky-400 to-blue-500"
+  },
+  {
+    id: 2,
+    name: "Mihai Ionescu",
+    role: "Backend Developer",
+    description: "A proiectat arhitectura bazei de date în Supabase, securitatea (RLS) și logica de sincronizare în timp real.",
+    icon: Database,
+    linkedin: "https://linkedin.com",
+    color: "from-indigo-400 to-purple-500"
+  },
+  {
+    id: 3,
+    name: "Elena Radu",
+    role: "Fullstack Engineer",
+    description: "A integrat funcționalitățile complexe de filtrare, sistemul de roluri și serviciile de autentificare.",
+    icon: Code,
+    linkedin: "https://linkedin.com",
+    color: "from-emerald-400 to-teal-500"
+  },
+  {
+    id: 4,
+    name: "Andrei Dumitrescu",
+    role: "Security & QA",
+    description: "S-a asigurat că platforma este impenetrabilă, gestionând permisiunile și testând riguros fiecare flux.",
+    icon: ShieldCheck,
+    linkedin: "https://linkedin.com",
+    color: "from-rose-400 to-orange-500"
+  }
+];
+
+export function Team() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen relative bg-gradient-to-br from-sky-950 via-sky-900 to-slate-900 overflow-hidden selection:bg-sky-500/30">
+      
+      {/* Fundalul animat */}
+      <NetworkBackground />
+
+      {/* Butonul de Întoarcere - Poziționat sus, în afara fluxului */}
+      <div className="relative z-20 pt-8 px-6 md:px-12">
+        <Button 
+          variant="outline" 
+          // navigate(-1) te întoarce fix la pagina anterioară
+          onClick={() => navigate(-1)} 
+          leftIcon={<ArrowLeft className="w-5 h-5" />}
+          className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 backdrop-blur-md"
+        >
+          Înapoi la platformă
+        </Button>
+      </div>
+
+      {/* Conținutul Principal */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh] px-4 py-12">
+        
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center mb-16"
+        >
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4 drop-shadow-md">
+            Echipa <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 to-blue-400">Centria</span>
+          </h1>
+          <p className="text-sky-200 text-lg max-w-xl mx-auto font-medium">
+            Oamenii pasionați care au transformat viziunea unei administrații publice digitale în realitate.
+          </p>
+        </motion.div>
+
+        {/* Grid-ul cu Carduri */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto w-full">
+          {TEAM_MEMBERS.map((member, index) => {
+            const Icon = member.icon;
+            return (
+              <motion.div
+                key={member.id}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="group relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 shadow-2xl hover:bg-white/15 transition-all duration-300 flex flex-col items-center text-center hover:-translate-y-2"
+              >
+                {/* Iconița Rolului (Avatar) */}
+                <div className={`w-16 h-16 rounded-2xl mb-5 flex items-center justify-center bg-gradient-to-br ${member.color} shadow-lg shadow-black/20 group-hover:scale-110 transition-transform duration-300`}>
+                  <Icon className="w-8 h-8 text-white" />
+                </div>
+
+                <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
+                <p className="text-sm font-semibold text-sky-300 uppercase tracking-wider mb-4">{member.role}</p>
+                
+                <p className="text-sky-100/80 text-sm leading-relaxed mb-6 flex-1">
+                  {member.description}
+                </p>
+
+                {/* Buton LinkedIn */}
+                <a 
+                  href={member.linkedin} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-auto w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-sky-600 hover:border-sky-500 transition-all duration-300 font-medium group/btn"
+                >
+                  <Linkedin className="w-5 h-5 text-sky-300 group-hover/btn:text-white transition-colors" />
+                  <span>Conectează-te</span>
+                </a>
+              </motion.div>
+            );
+          })}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+</file>
 
 <file path=".gitignore">
 node_modules/
@@ -114,120 +383,6 @@ pnpm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
-</file>
-
-<file path="App.tsx">
-import React, { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { supabase } from "./lib/supabase";
-import { authService } from "./services/authService";
-import { Login } from "./pages/Login";
-import { Layout } from "./components/layout/Layout";
-import { Dashboard } from "./pages/Dashboard";
-import { CreateRequest } from "./pages/CreateRequest";
-import { RequestHistory } from "./pages/RequestHistory";
-import { AppProvider } from "./context/AppContext";
-import { UserProfile } from "./types";
-import { Loader2 } from "lucide-react";
-
-function App() {
-  const [session, setSession] = useState<any>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    // 1. O singură funcție sigură care face totul
-    async function initAuth() {
-      try {
-        // Aducem și sesiunea și profilul dintr-un singur foc
-        const sessionData = await authService.getSession();
-        
-        if (mounted) {
-          if (sessionData) {
-            setSession(sessionData);
-            setProfile(sessionData.profile);
-          } else {
-            setSession(null);
-            setProfile(null);
-          }
-        }
-      } catch (error) {
-        console.error("Eroare la inițializarea aplicației:", error);
-      } finally {
-        // GARANTAT: Indiferent dacă e succes sau eroare, oprim loading-ul!
-        if (mounted) setLoading(false);
-      }
-    }
-
-    // Rulăm la deschiderea / refresh-ul paginii
-    initAuth();
-
-    // 2. Ascultăm DOAR evenimentele importante (Login / Logout din interfață)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (!mounted) return;
-
-      // Dacă Supabase ne anunță de un Refresh nativ, îl ignorăm pentru că îl tratează initAuth()
-      if (event === 'INITIAL_SESSION') return;
-
-      if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setProfile(null);
-        setLoading(false);
-      } else if (event === 'SIGNED_IN') {
-        setLoading(true);
-        initAuth();
-      } else if (event === 'TOKEN_REFRESHED') {
-        // La reîmprospătarea tokenului, doar salvăm noua sesiune în fundal, nu blocăm ecranul
-        setSession(newSession);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-5">
-        <Loader2 className="w-12 h-12 animate-spin text-sky-600" />
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-xl text-slate-800 font-bold">Se încarcă</p>
-          <p className="text-slate-500 font-medium">Pregătim platforma Centria...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <BrowserRouter>
-      <AppProvider user={session?.user} profile={profile}>
-        {!session ? (
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        ) : (
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              {profile?.role === 'primarie' && (
-                <Route path="/create-request" element={<CreateRequest />} />
-              )}
-              <Route path="/history" element={<RequestHistory />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Layout>
-        )}
-      </AppProvider>
-    </BrowserRouter>
-  );
-}
-
-export default App;
 </file>
 
 <file path="components/common/Badge.tsx">
@@ -881,108 +1036,6 @@ export function SearchBar({
 }
 </file>
 
-<file path="components/common/Select.tsx">
-import React, { SelectHTMLAttributes, forwardRef, useId } from "react";
-import { ChevronDown } from "lucide-react";
-import { classNames } from "@/utils/helpers";
-
-export interface SelectOption {
-  value: string;
-  label: string;
-}
-
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-  options: SelectOption[];
-  placeholder?: string;
-}
-
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, options, placeholder, className, id, disabled, value, defaultValue, ...props }, ref) => {
-    // Generăm ID-uri sigure pentru React
-    const reactId = useId();
-    const selectId = id || reactId;
-    const helperId = `${selectId}-helper`;
-    const errorId = `${selectId}-error`;
-
-    // REPARAT: Determinăm dacă componenta este controlată (folosește value) sau necontrolată
-    const isControlled = value !== undefined;
-    
-    // Setăm valoarea implicită corectă pentru a evita warning-ul de "uncontrolled vs controlled"
-    const resolvedValue = isControlled ? (value || "") : undefined;
-    const resolvedDefault = !isControlled ? (defaultValue || (placeholder ? "" : undefined)) : undefined;
-
-    return (
-      <div className="w-full flex flex-col gap-1.5">
-        {label && (
-          <label
-            htmlFor={selectId}
-            className={classNames(
-              "text-sm font-medium text-slate-700",
-              disabled && "opacity-50"
-            )}
-          >
-            {label}
-          </label>
-        )}
-        
-        <div className="relative flex items-center">
-          <select
-            ref={ref}
-            id={selectId}
-            disabled={disabled}
-            aria-invalid={!!error}
-            aria-describedby={error ? errorId : helperText ? helperId : undefined}
-            className={classNames(
-              "w-full appearance-none rounded-lg border bg-white pl-3 pr-10 py-2.5 transition-all duration-200",
-              "text-base md:text-sm text-slate-900",
-              "focus:outline-none focus:ring-4",
-              "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-100",
-              error
-                ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/20"
-                : "border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:ring-sky-500/20",
-              className
-            )}
-            value={resolvedValue}
-            defaultValue={resolvedDefault}
-            {...props}
-          >
-            {placeholder && (
-              <option value="" disabled className="text-slate-500">
-                {placeholder}
-              </option>
-            )}
-            {options.map((option) => (
-              <option key={option.value} value={option.value} className="text-slate-900">
-                {option.label}
-              </option>
-            ))}
-          </select>
-          
-          <div className="absolute right-3 flex items-center justify-center pointer-events-none text-slate-400">
-            <ChevronDown className={classNames("w-5 h-5", disabled && "opacity-50")} />
-          </div>
-        </div>
-
-        {error ? (
-          <p id={errorId} className="text-sm text-rose-500 font-medium">
-            {error}
-          </p>
-        ) : helperText ? (
-          <p id={helperId} className="text-sm text-slate-500">
-            {helperText}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-);
-
-Select.displayName = "Select";
-</file>
-
 <file path="components/common/Textarea.tsx">
 import React, { TextareaHTMLAttributes, forwardRef, useId } from "react";
 import { classNames } from "@/utils/helpers";
@@ -1242,12 +1295,17 @@ export function StatsCard({ title, value, icon: Icon, color, delay = 0 }: StatsC
 
 <file path="components/layout/Footer.tsx">
 import React, { useState, useEffect } from "react";
-import { Building2, ArrowUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Link } from "react-router-dom";
+
+// Importul oficial al logo-ului tău
+import logoImg from "@/assets/logo.png";
 
 export function Footer() {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
+  // Logica pentru afișarea butonului de "Sus" la scroll
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -1279,29 +1337,44 @@ export function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             
-            {/* Secțiunea Logo & Nume */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <span className="text-xl font-bold text-white tracking-wide block">
-                  Centria
-                </span>
-                <span className="text-sm text-sky-200">
+            {/* Partea Stângă: Logo și Branding */}
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <img 
+                src={logoImg} 
+                alt="Centria Logo" 
+                className="h-10 w-auto object-contain" 
+              />
+              <div className="text-center sm:text-left border-t sm:border-t-0 sm:border-l border-sky-500 pt-3 sm:pt-0 sm:pl-4 mt-1 sm:mt-0">
+                <span className="text-sm text-sky-200 block font-medium">
                   Administrație Publică
+                </span>
+                <span className="text-xs text-sky-300 block mt-0.5">
+                  Platformă inteligentă de management.
                 </span>
               </div>
             </div>
 
-            {/* Secțiunea Descriere */}
-            <p className="text-sm md:text-base text-sky-100 text-center md:text-right max-w-sm">
-              Platformă inteligentă de management al cererilor și resurselor administrative.
-            </p>
+            {/* Partea Dreaptă: Link-uri de Navigare */}
+            <div className="text-sm md:text-base text-sky-100 text-center md:text-right flex flex-wrap justify-center items-center gap-3">
+              <Link 
+                to="/team" 
+                className="hover:text-white font-medium transition-colors"
+              >
+                Echipa de Dezvoltare
+              </Link>
+              <span className="opacity-30">|</span>
+              <a href="#" className="hover:text-white transition-colors">
+                Suport Tehnic
+              </a>
+              <span className="hidden sm:inline opacity-30">|</span>
+              <a href="#" className="hidden sm:inline hover:text-white transition-colors">
+                Termeni și Condiții
+              </a>
+            </div>
           </div>
         </div>
 
-        {/* Secțiunea de Copyright curată */}
+        {/* Zona de Copyright */}
         <div className="border-t border-white/10 py-4 bg-black/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center">
             <p className="text-sm text-sky-200/70 text-center">
@@ -1311,7 +1384,7 @@ export function Footer() {
         </div>
       </footer>
 
-      {/* Butonul de Scroll to Top */}
+      {/* Butonul animat de Scroll to Top */}
       <AnimatePresence>
         {showScrollTop && (
           <motion.button
@@ -1386,111 +1459,210 @@ export function Layout({ children }: LayoutProps) {
 }
 </file>
 
-<file path="components/notifications/NotificationContainer.tsx">
-import React, { forwardRef } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react"; 
-import { useApp } from "@/context/AppContext";
-import { Notification } from "@/types";
-import { classNames } from "@/utils/helpers";
+<file path="components/layout/NetworkBackground.tsx">
+import React, { useEffect, useRef } from 'react';
 
-const iconMap = {
-  success: CheckCircle2,
-  error: XCircle,
-  warning: AlertCircle,
-  info: Info,
+// Toate cele 41 de reședințe de județ + București
+const MUNICIPALITIES = [
+  "București", "Alba Iulia", "Arad", "Pitești", "Bacău", "Oradea", "Bistrița", "Botoșani",
+  "Brașov", "Brăila", "Buzău", "Reșița", "Călărași", "Cluj-Napoca", "Constanța", "Sfântu Gheorghe",
+  "Târgoviște", "Craiova", "Galați", "Giurgiu", "Târgu Jiu", "Miercurea Ciuc", "Deva", "Slobozia",
+  "Iași", "Baia Mare", "Turnu Severin", "Târgu Mureș", "Piatra Neamț", "Slatina", "Ploiești",
+  "Satu Mare", "Zalău", "Sibiu", "Suceava", "Alexandria", "Timișoara", "Tulcea", "Vaslui",
+  "Râmnicu Vâlcea", "Focșani"
+];
+
+// Servicii reale, externalizate frecvent de primării
+const SERVICES = [
+  "Asfaltare", "Salubritate", "Dezăpezire", "Dezinsecție", "Iluminat", 
+  "Digitalizare", "Consultanță", "Proiectare", "Cadastru", "Construcții", 
+  "Peisagistică", "Securitate", "Mentenanță", "Audit", "Birotică", 
+  "Mobilier", "Curățenie", "Arhitectură", "Evenimente", "Catering"
+];
+
+const CONFIG = {
+  particleCount: 50, 
+  connectionDistance: 190, 
+  speed: 0.32,
+  // Configurarea logo-ului central animat
+  logo: {
+    text: "CENTRIA",
+    baseSize: 64,
+    yOffset: -120, // Mutat mai sus pentru a sta peste formular
+    pulseSpeed: 0.006, 
+    pulseRange: 0.15, 
+  }
 };
 
-// Culori mai rafinate, cu borduri translucide pentru un efect subtil
-const styleMap = {
-  success: "bg-emerald-50 border-emerald-200/60 text-emerald-800",
-  error: "bg-rose-50 border-rose-200/60 text-rose-800",
-  warning: "bg-amber-50 border-amber-200/60 text-amber-800",
-  info: "bg-blue-50 border-blue-200/60 text-blue-800",
-};
+class Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  text: string;
+  isMunicipality: boolean;
 
-const iconColorMap = {
-  success: "text-emerald-500",
-  error: "text-rose-500",
-  warning: "text-amber-500",
-  info: "text-blue-500",
-};
+  constructor(canvasWidth: number, canvasHeight: number) {
+    this.x = Math.random() * canvasWidth;
+    this.y = Math.random() * canvasHeight;
+    this.vx = (Math.random() - 0.5) * CONFIG.speed;
+    this.vy = (Math.random() - 0.5) * CONFIG.speed;
+    
+    this.isMunicipality = Math.random() > 0.5;
+    const sourceArray = this.isMunicipality ? MUNICIPALITIES : SERVICES;
+    this.text = sourceArray[Math.floor(Math.random() * sourceArray.length)];
+  }
 
-interface NotificationItemProps {
-  notification: Notification;
-  onRemove: (id: string) => void;
+  update(canvasWidth: number, canvasHeight: number) {
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.x <= 0 || this.x >= canvasWidth) this.vx *= -1;
+    if (this.y <= 0 || this.y >= canvasHeight) this.vy *= -1;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = this.isMunicipality ? '#0284c7' : '#7c3aed'; 
+    ctx.fill();
+
+    ctx.font = "500 11px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(this.text, this.x + 8, this.y + 4);
+  }
 }
 
-// REPARAT: Am folosit forwardRef pentru ca Framer Motion să poată anima componenta la ieșire (exit)
-const NotificationItem = forwardRef<HTMLDivElement, NotificationItemProps>(
-  ({ notification, onRemove }, ref) => {
-    const Icon = iconMap[notification.type];
+export function NetworkBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-    return (
-      <motion.div
-        ref={ref} // Aici trimitem ref-ul către Framer Motion
-        // Prop-ul MAGIC: Animație fluidă când o notificare este ștearsă iar celelalte se rearanjează
-        layout 
-        // Animație Apple-like: Apare de sus, cu un blur subtil
-        initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(4px)" }}
-        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-        exit={{ opacity: 0, scale: 0.85, filter: "blur(2px)", transition: { duration: 0.2 } }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        
-        // Accesibilitate vitală
-        role="alert"
-        aria-live="assertive"
-        
-        className={classNames(
-          // Reactivăm pointer-events doar pentru notificare, nu pentru tot ecranul
-          "pointer-events-auto flex items-start gap-3 w-full p-4 rounded-2xl border shadow-xl shadow-slate-200/50 backdrop-blur-sm",
-          styleMap[notification.type]
-        )}
-      >
-        {/* Iconița sus (în caz că textul e lung și se întinde pe 2 rânduri) */}
-        <Icon className={classNames("w-5 h-5 flex-shrink-0 mt-0.5", iconColorMap[notification.type])} />
-        
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium leading-relaxed">
-            {notification.message}
-          </p>
-        </div>
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-        <button
-          onClick={() => onRemove(notification.id)}
-          aria-label="Închide notificarea"
-          className="flex-shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-lg opacity-50 hover:opacity-100 hover:bg-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </motion.div>
-    );
-  }
-);
+    let particles: Particle[] = [];
+    let animationFrameId: number;
+    
+    // Variabile pentru animația logo-ului
+    let logoPulseFactor = 0;
+    let logoPulseDirection = 1;
 
-// Nume de afișare necesar când folosim forwardRef (ajută la debugging)
-NotificationItem.displayName = "NotificationItem";
+    const resizeCanvas = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.scale(dpr, dpr);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      
+      initParticles();
+    };
 
-export function NotificationContainer() {
-  const { notifications, removeNotification } = useApp();
+    const initParticles = () => {
+      particles = [];
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      for (let i = 0; i < CONFIG.particleCount; i++) {
+        particles.push(new Particle(width, height));
+      }
+    };
+
+    const drawNetwork = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      ctx.clearRect(0, 0, width, height);
+      
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      // ============================================================================
+      // 1. DESENARE LOGO CENTRAL "CENTRIA"
+      // ============================================================================
+      
+      // Actualizăm factorul de pulse (0 -> 1 -> 0)
+      logoPulseFactor += CONFIG.logo.pulseSpeed * logoPulseDirection;
+      if (logoPulseFactor >= 1 || logoPulseFactor <= 0) {
+        logoPulseDirection *= -1;
+      }
+      
+      // Calculăm opacitatea pulsatorie (baza + fluctuația)
+      const currentAlpha = 0.8 + (logoPulseFactor - 0.5) * 2 * CONFIG.logo.pulseRange;
+      
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const logoSize = Math.max(32, Math.min(CONFIG.logo.baseSize, width * 0.12));
+      ctx.font = `800 ${logoSize}px Inter, system-ui, sans-serif`;
+      
+      const logoY = centerY + CONFIG.logo.yOffset;
+
+      const gradient = ctx.createLinearGradient(
+        centerX - logoSize * 2, 
+        logoY, 
+        centerX + logoSize * 2, 
+        logoY
+      );
+      gradient.addColorStop(0, `rgba(124, 58, 237, ${currentAlpha})`);
+      gradient.addColorStop(1, `rgba(79, 70, 229, ${currentAlpha})`);
+
+      // EROAREA ERA AICI (am eliminat spațiul din currentAlpha)
+      ctx.shadowColor = `rgba(139, 92, 246, ${currentAlpha * 0.4})`; 
+      ctx.shadowBlur = logoSize / 2; 
+      ctx.fillStyle = gradient;
+      
+      ctx.fillText(CONFIG.logo.text, centerX, logoY);
+      
+      // Resetăm glow-ul pentru a nu afecta liniile și punctele
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+
+      // ============================================================================
+      // 2. DESENARE REȚEA (Linii și Puncte)
+      // ============================================================================
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < CONFIG.connectionDistance) {
+            const opacity = 1 - (distance / CONFIG.connectionDistance);
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(124, 58, 237, ${opacity * 0.18})`; 
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+      }
+
+      particles.forEach(p => {
+        p.update(width, height);
+        p.draw(ctx);
+      });
+
+      animationFrameId = requestAnimationFrame(drawNetwork);
+    };
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    drawNetwork();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
 
   return (
-    <div 
-      // pointer-events-none e CRITIC aici. Permite utilizatorului să dea click "prin" acest container
-      // z-[150] asigură că va sta peste orice modal posibil
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center gap-3 w-full max-w-sm px-4 pointer-events-none"
-    >
-      {/* mode="popLayout" previne salturile bruște în DOM când un element iese din scenă */}
-      <AnimatePresence mode="popLayout">
-        {notifications.map((notification) => (
-          <NotificationItem
-            key={notification.id}
-            notification={notification}
-            onRemove={removeNotification}
-          />
-        ))}
-      </AnimatePresence>
-    </div>
+    <canvas 
+      ref={canvasRef} 
+      className="fixed inset-0 z-0 pointer-events-none opacity-80 bg-slate-50"
+    />
   );
 }
 </file>
@@ -1836,168 +2008,6 @@ export function EditRequestModal({ request, isOpen, onClose, onSave }: EditReque
           </Button>
         </div>
       </form>
-    </Modal>
-  );
-}
-</file>
-
-<file path="components/requests/RequestDetailModal.tsx">
-import React from "react";
-import {
-  Calendar, Building, Briefcase, User, Mail, Phone,
-  MapPin, Hash, Clock, Edit, Trash2, CheckCircle,
-  XCircle, RotateCcw,
-} from "lucide-react";
-import { Modal } from "../common/Modal";
-import { Badge } from "../common/Badge";
-import { Button } from "../common/Button";
-import { Request, RequestStatus } from "@/types";
-import { formatDateTime, formatDate } from "@/utils/helpers";
-
-interface RequestDetailModalProps {
-  request: Request | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onUpdateStatus?: (id: string, status: RequestStatus) => void;
-  onEdit?: (request: Request) => void;
-  onDelete?: (request: Request) => void;
-}
-
-export function RequestDetailModal({
-  request,
-  isOpen,
-  onClose,
-  onUpdateStatus,
-  onEdit,
-  onDelete,
-}: RequestDetailModalProps) {
-  if (!request) return null;
-
-  // REPARAT: Acum folosim "request.provider?.name" pentru că datele vin din JOIN-ul Supabase
-  const detailFields = [
-    { icon: Building, label: "Furnizor", value: request.provider?.name || "Necunoscut" },
-    { icon: Hash, label: "CUI Furnizor", value: request.provider?.cui || "-" },
-    { icon: Briefcase, label: "Serviciu", value: request.service?.name || "Necunoscut" },
-    { icon: Calendar, label: "Data Creării", value: formatDateTime(request.createdAt) },
-    { icon: Clock, label: "Ultima Actualizare", value: formatDateTime(request.updatedAt) },
-    { icon: User, label: "Persoană Contact", value: request.contactPerson.name },
-    { icon: Mail, label: "Email Contact", value: request.contactPerson.email },
-    { icon: Phone, label: "Telefon Contact", value: request.contactPerson.phone },
-    { icon: MapPin, label: "Localitate", value: request.locality },
-  ];
-
-  if (request.estimatedStartDate) {
-    detailFields.push({
-      icon: Calendar,
-      label: "Data Estimată Început",
-      value: formatDate(request.estimatedStartDate),
-    });
-  }
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Detalii Cerere" size="lg">
-      <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-xl font-semibold text-primary-900">{request.title}</h3>
-            <p className="text-lg text-primary-500 mt-1">{request.description}</p>
-          </div>
-          <Badge status={request.status} size="lg" />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {detailFields.map((field, index) => {
-            const Icon = field.icon;
-            return (
-              <div
-                key={index}
-                className="flex items-center gap-3 p-3 rounded-md bg-primary-50/70 border border-primary-100/50"
-              >
-                <div className="w-10 h-10 rounded-md bg-white flex items-center justify-center flex-shrink-0 shadow-sm border border-primary-100/50">
-                  <Icon className="w-5 h-5 text-primary-500" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-lg text-primary-400">{field.label}</p>
-                  <p className="text-lg font-medium text-primary-900 truncate">{field.value}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {onUpdateStatus && (
-          <div className="p-4 rounded-md bg-primary-50/50 border border-primary-100/50">
-            <p className="text-lg font-medium text-primary-700 mb-3">Schimbă Status</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  onUpdateStatus(request.id, "accepted");
-                  onClose();
-                }}
-                disabled={request.status === "accepted"}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <CheckCircle className="w-4 h-4" />
-                Acceptă
-              </button>
-              <button
-                onClick={() => {
-                  onUpdateStatus(request.id, "rejected");
-                  onClose();
-                }}
-                disabled={request.status === "rejected"}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <XCircle className="w-4 h-4" />
-                Respinge
-              </button>
-              <button
-                onClick={() => {
-                  onUpdateStatus(request.id, "pending");
-                  onClose();
-                }}
-                disabled={request.status === "pending"}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Pending
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ⚠️ REPARAT: Blocăm editarea/ștergerea dacă cererea nu mai este în așteptare */}
-        {request.status === "pending" && (
-          <div className="flex flex-wrap gap-3 pt-4 border-t border-primary-100">
-            {onEdit && (
-              <Button
-                variant="outline"
-                leftIcon={<Edit className="w-4 h-4" />}
-                onClick={() => {
-                  onEdit(request);
-                  onClose();
-                }}
-              >
-                Editează
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                variant="outline"
-                className="text-red-600 border-red-200 hover:bg-red-50"
-                leftIcon={<Trash2 className="w-4 h-4" />}
-                onClick={() => {
-                  onDelete(request);
-                  onClose();
-                }}
-              >
-                Șterge
-              </Button>
-            )}
-          </div>
-        )}
-
-      </div>
     </Modal>
   );
 }
@@ -2423,14 +2433,16 @@ export function RequestForm() {
 <file path="components/requests/RequestList.tsx">
 import { useState } from "react";
 import { AnimatePresence } from "motion/react";
+import { FileQuestion } from "lucide-react";
 import { RequestCard } from "../dashboard/RequestCard";
 import { RequestDetailModal } from "./RequestDetailModal";
 import { EditRequestModal } from "./EditRequestModal";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 import { Request, RequestStatus } from "@/types";
 import { useApp } from "@/context/AppContext";
+import { RequestCardSkeleton } from "@/components/common/Skeleton";
+import { EmptyState } from "@/components/common/EmptyState";
 
-// 1. Am definit clar ce "Props" poate primi această componentă
 interface RequestListProps {
   requests: Request[];
   title?: string;
@@ -2439,7 +2451,7 @@ interface RequestListProps {
 }
 
 export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: RequestListProps) {
-  const { updateRequest, deleteRequest } = useApp();
+  const { updateRequest, deleteRequest, isLoadingRequests } = useApp();
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [modalState, setModalState] = useState<{ type: 'detail' | 'edit' | 'delete' | null }>({ type: null });
 
@@ -2459,15 +2471,32 @@ export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: R
 
   return (
     <div className="space-y-4">
-      {title && <h2 className="text-xl font-bold text-slate-800">{title} ({requests.length})</h2>}
+      {/* Ascundem numărul de cereri cât timp se încarcă */}
+      {title && (
+        <h2 className="text-xl font-bold text-slate-800">
+          {title} {!isLoadingRequests && requests.length > 0 && `(${requests.length})`}
+        </h2>
+      )}
       
-      {/* 2. Tratăm cazul în care lista este goală */}
-      {requests.length === 0 && emptyMessage ? (
-        <div className="p-8 text-center bg-white border border-slate-200 rounded-xl text-slate-500">
-          {emptyMessage}
+      {isLoadingRequests ? (
+        <div className="flex flex-col gap-3">
+          {/* 1. Starea de Încărcare (Skeleton Loaders) */}
+          <RequestCardSkeleton />
+          <RequestCardSkeleton />
+          <RequestCardSkeleton />
+        </div>
+      ) : requests.length === 0 ? (
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm">
+          {/* 2. Starea Goală (Empty State Premium) */}
+          <EmptyState 
+            icon={FileQuestion}
+            title="Nicio cerere găsită"
+            description={emptyMessage || "Nu există nicio cerere înregistrată care să corespundă criteriilor curente."}
+          />
         </div>
       ) : (
         <div className="flex flex-col gap-3">
+          {/* 3. Starea cu Date (Lista animată) */}
           <AnimatePresence mode="popLayout">
             {requests.map((req, index) => (
               <RequestCard
@@ -2483,11 +2512,11 @@ export function RequestList({ requests, title, emptyMessage, onUpdateStatus }: R
         </div>
       )}
 
+      {/* Modale */}
       <RequestDetailModal 
         isOpen={modalState.type === 'detail'} 
         request={selectedRequest} 
         onClose={closeModals}
-        // 3. Pasăm onUpdateStatus mai departe către modal
         onUpdateStatus={onUpdateStatus}
       />
 
@@ -3176,53 +3205,6 @@ export function FurnizorDashboard() {
 }
 </file>
 
-<file path="pages/dashboards/PrimarieDashboard.tsx">
-import React from "react";
-import { Link } from "react-router-dom";
-import { motion } from "motion/react";
-import { Plus, LayoutDashboard, Loader2 } from "lucide-react";
-import { RequestList } from "@/components/requests/RequestList";
-import { SearchBar } from "@/components/common/SearchBar";
-import { Button } from "@/components/common/Button";
-import { useApp } from "@/context/AppContext";
-
-export function PrimarieDashboard() {
-  const { filteredRequests, filters, setFilter, isLoadingRequests } = useApp();
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-md bg-gradient-to-br from-sky-600 to-sky-800 flex items-center justify-center shadow-sm">
-            <LayoutDashboard className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Panou Primărie</h1>
-            <p className="text-slate-500">Gestionează cererile tale către furnizori</p>
-          </div>
-        </div>
-        <Link to="/create-request">
-          <Button variant="primary" leftIcon={<Plus className="w-5 h-5" />}>Cerere Nouă</Button>
-        </Link>
-      </div>
-
-      <SearchBar
-        value={filters.searchQuery || ""}
-        onChange={(value) => setFilter("searchQuery", value)}
-        placeholder="Caută în cererile tale..."
-      />
-
-      {isLoadingRequests ? (
-        <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>
-      ) : (
-        <RequestList requests={filteredRequests} title="Cererile Mele" />
-        // Observă că NU i-am pasat onUpdateStatus. Deci primăria nu poate da "Accept/Reject".
-      )}
-    </div>
-  );
-}
-</file>
-
 <file path="pages/RequestHistory.tsx">
 import React from "react";
 import { motion } from "motion/react";
@@ -3312,42 +3294,6 @@ export function RequestHistory() {
 }
 </file>
 
-<file path="services/municipalityService.ts">
-import { supabase } from "@/lib/supabase";
-import { Database } from "@/types/database";
-import { Municipality } from "@/types";
-// Extragem tipurile corecte din structura Supabase
-type DbMunicipality = Database["public"]["Tables"]["municipalities"]["Row"];
-type DbMunicipalityInsert = Database["public"]["Tables"]["municipalities"]["Insert"];
-
-function mapDbMunicipalityToMunicipality(db: DbMunicipality): Municipality {
-  return {
-    id: db.id, name: db.name, cui: db.cui,
-    contactPerson: { name: db.contact_person, email: db.email, phone: db.phone },
-    locality: db.locality,
-  };
-}
-
-export async function fetchMunicipality(): Promise<Municipality | null> {
-  const { data, error } = await supabase.from("municipalities").select("*").limit(1).single();
-  if (error) return null;
-  return data ? mapDbMunicipalityToMunicipality(data) : null;
-}
-
-export async function fetchAllMunicipalities(): Promise<Municipality[]> {
-  const { data, error } = await supabase.from("municipalities").select("*").order("name");
-  if (error) throw error;
-  return (data || []).map(mapDbMunicipalityToMunicipality);
-}
-
-// NOU: Funcție pentru Admin
-export async function createMunicipality(payload: DbMunicipalityInsert): Promise<Municipality> {
-  const { data, error } = await supabase.from("municipalities").insert([payload]).select().single();
-  if (error) throw error;
-  return mapDbMunicipalityToMunicipality(data);
-}
-</file>
-
 <file path="services/providerService.ts">
 import { supabase } from "@/lib/supabase";
 import { Database } from "@/types/database";
@@ -3377,120 +3323,6 @@ export async function createProvider(name: string, cui: string, email: string): 
   if (error) throw error;
   return mapDbProviderToProvider(data);
 }
-</file>
-
-<file path="services/requestService.ts">
-import { supabase } from "@/lib/supabase";
-import { Request, RequestStatus, UserProfile } from "@/types";
-
-function mapDbRequestToRequest(dbRequest: any): Request {
-  return {
-    id: dbRequest.id,
-    title: dbRequest.title,
-    description: dbRequest.description || "",
-    status: dbRequest.status as RequestStatus,
-    municipalityId: dbRequest.municipality_id || "",
-    municipality: dbRequest.municipality || { name: "Necunoscut", cui: "-", locality: dbRequest.locality },
-    contactPerson: {
-      name: dbRequest.contact_person || "",
-      email: dbRequest.contact_email || "",
-      phone: dbRequest.contact_phone || "",
-    },
-    locality: dbRequest.locality || "",
-    serviceId: dbRequest.service_id || "",
-    service: dbRequest.service || { name: "Serviciu Necunoscut" },
-    providerId: dbRequest.provider_id || "",
-    provider: dbRequest.provider || { name: "Furnizor Necunoscut", cui: "-" },
-    createdAt: dbRequest.created_at || new Date().toISOString(),
-    estimatedStartDate: dbRequest.estimated_start_date || undefined,
-    updatedAt: dbRequest.updated_at || new Date().toISOString(),
-  };
-}
-
-export const requestService = {
-  async fetchAll(profile: UserProfile | null): Promise<Request[]> {
-    let query = supabase
-      .from("requests")
-      .select(`*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)`)
-      .order("created_at", { ascending: false });
-
-    if (profile?.role === "primarie" && profile.entityId) {
-      query = query.eq("municipality_id", profile.entityId);
-    } else if (profile?.role === "furnizor" && profile.entityId) {
-      query = query.eq("provider_id", profile.entityId);
-    }
-
-    const { data, error } = await query;
-    if (error) {
-      console.error("❌ EROARE FETCH CERERI:", error);
-      throw error;
-    }
-    return (data || []).map(mapDbRequestToRequest);
-  },
-
-  async create(request: Omit<Request, "id" | "createdAt" | "updatedAt">): Promise<Request> {
-    // REPARAT: Ne asigurăm că string-urile goale ("") devin `null` pentru coloanele care sunt chei străine (UUID)
-    const dbPayload = {
-      title: request.title,
-      description: request.description,
-      status: request.status,
-      municipality_id: request.municipalityId || null,
-      contact_person: request.contactPerson.name,
-      contact_email: request.contactPerson.email,
-      contact_phone: request.contactPerson.phone,
-      locality: request.locality,
-      // Dacă e string gol sau "none", trimitem null ca să nu crape baza de date
-      service_id: (request.serviceId && request.serviceId !== "none") ? request.serviceId : null,
-      provider_id: (request.providerId && request.providerId !== "none") ? request.providerId : null,
-      estimated_start_date: request.estimatedStartDate || null,
-    };
-
-    console.log("Trimitem către Supabase:", dbPayload);
-
-    const { data, error } = await supabase
-      .from("requests")
-      .insert([dbPayload])
-      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
-      .single();
-      
-    if (error) {
-      // Acum vom vedea exact DE CE crapă baza de date direct în consola browserului
-      console.error("❌ EROARE CRITICĂ LA CREAREA CERERII:", error);
-      throw error;
-    }
-    
-    return mapDbRequestToRequest(data);
-  },
-
-  async update(id: string, updates: Partial<Request>): Promise<Request> {
-    const dbUpdates: any = { updated_at: new Date().toISOString() };
-    if (updates.status) dbUpdates.status = updates.status;
-    if (updates.title) dbUpdates.title = updates.title;
-    if (updates.description) dbUpdates.description = updates.description;
-    if (updates.estimatedStartDate !== undefined) dbUpdates.estimated_start_date = updates.estimatedStartDate;
-
-    const { data, error } = await supabase
-      .from("requests")
-      .update(dbUpdates)
-      .eq("id", id)
-      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
-      .single();
-      
-    if (error) {
-      console.error("❌ EROARE LA UPDATE:", error);
-      throw error;
-    }
-    return mapDbRequestToRequest(data);
-  },
-
-  async delete(id: string): Promise<void> {
-    const { error } = await supabase.from("requests").delete().eq("id", id);
-    if (error) {
-      console.error("❌ EROARE LA ȘTERGERE:", error);
-      throw error;
-    }
-  }
-};
 </file>
 
 <file path="services/serviceService.ts">
@@ -4012,93 +3844,6 @@ export const Constants = {
 } as const
 </file>
 
-<file path="types/index.ts">
-export type RequestStatus = "accepted" | "rejected" | "pending";
-
-export interface Municipality {
-  id: string;
-  name: string;
-  cui: string;
-  contactPerson: { name: string; email: string; phone: string; };
-  locality: string;
-}
-
-export interface Provider {
-  id: string;
-  name: string;
-  cui: string;
-  services: string[];
-}
-
-export interface Service {
-  id: string;
-  name: string;
-  description: string;
-}
-
-// Adaugă documentUrl în interfața Request
-export interface Request {
-  id: string;
-  title: string;
-  description: string;
-  status: RequestStatus;
-  municipalityId: string;
-  municipality?: { name: string; cui: string; locality: string };
-  contactPerson: { name: string; email: string; phone: string; };
-  locality: string;
-  serviceId: string;
-  service?: { name: string };
-  providerId: string;
-  provider?: { name: string; cui: string };
-  createdAt: string;
-  estimatedStartDate?: string;
-  updatedAt: string;
-  documentUrl?: string; // <--- NOU: Adăugat pentru fișiere
-}
-
-export interface Notification {
-  id: string;
-  type: "success" | "error" | "info" | "warning";
-  message: string;
-  timestamp: number;
-}
-
-export interface DashboardStats {
-  total: number;
-  accepted: number;
-  rejected: number;
-  pending: number;
-}
-
-export interface FilterOptions {
-  status?: RequestStatus | "all";
-  providerId?: string;
-  serviceId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  searchQuery?: string;
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export type AppRole = "admin" | "primarie" | "furnizor";
-
-export interface UserProfile {
-  id: string;
-  role: AppRole;
-  entityId: string | null;
-}
-
-export interface UserSession {
-  user: any;
-  profile: UserProfile | null;
-  access_token: string;
-}
-</file>
-
 <file path="utils/helpers.ts">
 import { format, parseISO } from "date-fns";
 import { ro } from "date-fns/locale";
@@ -4195,26 +3940,252 @@ interface ImportMeta {
 }
 </file>
 
+<file path="App.tsx">
+import React, { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { supabase } from "./lib/supabase";
+import { authService } from "./services/authService";
+import { Login } from "./pages/Login";
+import { Team } from "./pages/Team"; // Asigură-te că ai creat fișierul pages/Team.tsx
+import { Layout } from "./components/layout/Layout";
+import { Dashboard } from "./pages/Dashboard";
+import { CreateRequest } from "./pages/CreateRequest";
+import { RequestHistory } from "./pages/RequestHistory";
+import { AppProvider } from "./context/AppContext";
+import { UserProfile } from "./types";
+import { Loader2 } from "lucide-react";
+
+function App() {
+  const [session, setSession] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function initAuth() {
+      try {
+        const sessionData = await authService.getSession();
+        if (mounted) {
+          if (sessionData) {
+            setSession(sessionData);
+            setProfile(sessionData.profile);
+          } else {
+            setSession(null);
+            setProfile(null);
+          }
+        }
+      } catch (error) {
+        console.error("Eroare la inițializarea aplicației:", error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!mounted) return;
+      if (event === 'INITIAL_SESSION') return;
+
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+      } else if (event === 'SIGNED_IN') {
+        setLoading(true);
+        initAuth();
+      } else if (event === 'TOKEN_REFRESHED') {
+        setSession(newSession);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 gap-5">
+        <Loader2 className="w-12 h-12 animate-spin text-sky-600" />
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-xl text-slate-800 font-bold">Se încarcă</p>
+          <p className="text-slate-500 font-medium">Pregătim platforma Centria...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <BrowserRouter>
+      <AppProvider user={session?.user} profile={profile}>
+        <Routes>
+          {/* CAZ 1: Utilizator neautentificat */}
+          {!session ? (
+            <>
+              <Route path="/login" element={<Login />} />
+              {/* Permitem vizualizarea echipei chiar și fără login (opțional) */}
+              <Route path="/team" element={<Team />} /> 
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </>
+          ) : (
+            /* CAZ 2: Utilizator autentificat */
+            <>
+              {/* Ruta TEAM - FĂRĂ HEADER (este în afara Layout-ului) */}
+              <Route path="/team" element={<Team />} />
+
+              {/* Toate rutele care au nevoie de Header și Footer sunt grupate aici sub Layout */}
+              <Route
+                path="*"
+                element={
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Dashboard />} />
+                      {profile?.role === "primarie" && (
+                        <Route path="/create-request" element={<CreateRequest />} />
+                      )}
+                      <Route path="/history" element={<RequestHistory />} />
+                      {/* Redirecționare către Dashboard pentru orice altă rută neexistentă */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </Layout>
+                }
+              />
+            </>
+          )}
+        </Routes>
+      </AppProvider>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+</file>
+
+<file path="components/common/Select.tsx">
+import React, { SelectHTMLAttributes, forwardRef, useId } from "react";
+import { ChevronDown } from "lucide-react";
+import { classNames } from "@/utils/helpers";
+
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+  options: SelectOption[];
+  placeholder?: string;
+}
+
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ label, error, helperText, options, placeholder, className, id, disabled, value, defaultValue, ...props }, ref) => {
+    // Generăm ID-uri sigure pentru React
+    const reactId = useId();
+    const selectId = id || reactId;
+    const helperId = `${selectId}-helper`;
+    const errorId = `${selectId}-error`;
+
+    // REPARAT: Determinăm dacă componenta este controlată (folosește value) sau necontrolată
+    const isControlled = value !== undefined;
+    
+    // Setăm valoarea implicită corectă pentru a evita warning-ul de "uncontrolled vs controlled"
+    const resolvedValue = isControlled ? (value || "") : undefined;
+    const resolvedDefault = !isControlled ? (defaultValue || (placeholder ? "" : undefined)) : undefined;
+
+    return (
+      <div className="w-full flex flex-col gap-1.5">
+        {label && (
+          <label
+            htmlFor={selectId}
+            className={classNames(
+              "text-sm font-medium text-slate-700",
+              disabled && "opacity-50"
+            )}
+          >
+            {label}
+          </label>
+        )}
+        
+        <div className="relative flex items-center">
+          <select
+            ref={ref}
+            id={selectId}
+            disabled={disabled}
+            aria-invalid={!!error}
+            aria-describedby={error ? errorId : helperText ? helperId : undefined}
+            className={classNames(
+              "w-full appearance-none rounded-lg border bg-white pl-3 pr-10 py-2.5 transition-all duration-200",
+              "text-base md:text-sm text-slate-900",
+              "focus:outline-none focus:ring-4",
+              "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-100",
+              error
+                ? "border-rose-300 focus:border-rose-500 focus:ring-rose-500/20"
+                : "border-slate-200 hover:border-slate-300 focus:border-sky-500 focus:ring-sky-500/20",
+              className
+            )}
+            value={resolvedValue}
+            defaultValue={resolvedDefault}
+            {...props}
+          >
+            {placeholder && (
+              <option value="" disabled className="text-slate-500">
+                {placeholder}
+              </option>
+            )}
+            {options.map((option) => (
+              <option key={option.value} value={option.value} className="text-slate-900">
+                {option.label}
+              </option>
+            ))}
+          </select>
+          
+          <div className="absolute right-3 flex items-center justify-center pointer-events-none text-slate-400">
+            <ChevronDown className={classNames("w-5 h-5", disabled && "opacity-50")} />
+          </div>
+        </div>
+
+        {error ? (
+          <p id={errorId} className="text-sm text-rose-500 font-medium">
+            {error}
+          </p>
+        ) : helperText ? (
+          <p id={helperId} className="text-sm text-slate-500">
+            {helperText}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+);
+
+Select.displayName = "Select";
+</file>
+
 <file path="components/layout/Header.tsx">
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Building2, User, Bell, Menu, X, LogOut } from "lucide-react";
+import { User, Bell, Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useApp } from "@/context/AppContext";
 import { classNames } from "@/utils/helpers";
-import { authService } from "@/services/authService"; // Importăm serviciul de autentificare
+import { authService } from "@/services/authService";
+
+// Importul exact pentru logoul tău
+import logoImg from "@/assets/logo.png"; 
 
 export function Header() {
   const location = useLocation();
   const { toggleProfile, stats, profile } = useApp(); 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Funcția de Deconectare
   const handleLogout = async () => {
     try {
       await authService.logout();
-      // Odată delogat, Supabase va emite evenimentul 'SIGNED_OUT', 
-      // iar fișierul App.tsx ne va arunca automat pe pagina de Login!
     } catch (error) {
       console.error("Eroare la deconectare:", error);
     }
@@ -4262,16 +4233,18 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Partea Stângă */}
+          {/* Partea Stângă (Logo + Navigare) */}
           <div className="flex items-center gap-8">
             <Link 
               to="/" 
               className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 rounded-lg p-1 -ml-1"
             >
-              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner group-hover:bg-white/25 transition-colors">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white tracking-wide">Centria</span>
+              {/* Noul tău Logo (înlocuiește vechiul icon) */}
+              <img 
+                src={logoImg} 
+                alt="Centria Logo" 
+                className="h-8 md:h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-105" 
+              />
             </Link>
 
             <nav className="hidden md:flex items-center gap-2">
@@ -4295,9 +4268,8 @@ export function Header() {
             </nav>
           </div>
 
-          {/* Partea Dreaptă */}
+          {/* Partea Dreaptă (Notificări, Profil, Logout) */}
           <div className="flex items-center gap-2 sm:gap-3">
-            
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-sky-900/40 border border-white/10 rounded-lg shadow-inner">
               <span className="text-sm text-sky-200">Pending:</span>
               <span className="text-sm font-bold text-white">{stats.pending}</span>
@@ -4310,16 +4282,14 @@ export function Header() {
               )}
             </button>
 
-            {/* Doar primăria are profil momentan, dar e ok să-l lăsăm ca placeholder */}
             <button
               onClick={toggleProfile}
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/5 text-white hover:bg-white/20 transition-colors"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 border border-white/5 text-white hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             >
               <User className="w-5 h-5" />
               <span className="text-sm font-medium">Profil</span>
             </button>
 
-            {/* NOU: Buton Deconectare Desktop */}
             <button
               onClick={handleLogout}
               className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-100 hover:bg-rose-500/40 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
@@ -4329,7 +4299,6 @@ export function Header() {
               <span className="text-sm font-medium">Ieșire</span>
             </button>
 
-            {/* Buton Meniu Mobil */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-sky-100 hover:bg-white/10 hover:text-white transition-colors"
@@ -4377,7 +4346,6 @@ export function Header() {
                   Profilul Meu
                 </button>
 
-                {/* NOU: Buton Deconectare Mobil */}
                 <button
                   onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
                   className="flex items-center gap-3 px-4 py-3 mt-1 rounded-lg text-base font-medium text-rose-200 hover:bg-rose-500/20 hover:text-white transition-colors text-left"
@@ -4391,6 +4359,115 @@ export function Header() {
         </AnimatePresence>
       </div>
     </header>
+  );
+}
+</file>
+
+<file path="components/notifications/NotificationContainer.tsx">
+import React, { forwardRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { CheckCircle2, XCircle, AlertCircle, Info, X } from "lucide-react"; 
+import { useApp } from "@/context/AppContext";
+import { Notification } from "@/types";
+import { classNames } from "@/utils/helpers";
+
+const iconMap = {
+  success: CheckCircle2,
+  error: XCircle,
+  warning: AlertCircle,
+  info: Info,
+};
+
+// Culori mai rafinate, cu borduri translucide pentru un efect subtil
+const styleMap = {
+  success: "bg-emerald-50 border-emerald-200/60 text-emerald-800",
+  error: "bg-rose-50 border-rose-200/60 text-rose-800",
+  warning: "bg-amber-50 border-amber-200/60 text-amber-800",
+  info: "bg-blue-50 border-blue-200/60 text-blue-800",
+};
+
+const iconColorMap = {
+  success: "text-emerald-500",
+  error: "text-rose-500",
+  warning: "text-amber-500",
+  info: "text-blue-500",
+};
+
+interface NotificationItemProps {
+  notification: Notification;
+  onRemove: (id: string) => void;
+}
+
+// REPARAT: Am folosit forwardRef pentru ca Framer Motion să poată anima componenta la ieșire (exit)
+const NotificationItem = forwardRef<HTMLDivElement, NotificationItemProps>(
+  ({ notification, onRemove }, ref) => {
+    const Icon = iconMap[notification.type];
+
+    return (
+      <motion.div
+        ref={ref} // Aici trimitem ref-ul către Framer Motion
+        // Prop-ul MAGIC: Animație fluidă când o notificare este ștearsă iar celelalte se rearanjează
+        layout 
+        // Animație Apple-like: Apare de sus, cu un blur subtil
+        initial={{ opacity: 0, y: -40, scale: 0.9, filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+        exit={{ opacity: 0, scale: 0.85, filter: "blur(2px)", transition: { duration: 0.2 } }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        
+        // Accesibilitate vitală
+        role="alert"
+        aria-live="assertive"
+        
+        className={classNames(
+          // Reactivăm pointer-events doar pentru notificare, nu pentru tot ecranul
+          "pointer-events-auto flex items-start gap-3 w-full p-4 rounded-2xl border shadow-xl shadow-slate-200/50 backdrop-blur-sm",
+          styleMap[notification.type]
+        )}
+      >
+        {/* Iconița sus (în caz că textul e lung și se întinde pe 2 rânduri) */}
+        <Icon className={classNames("w-5 h-5 flex-shrink-0 mt-0.5", iconColorMap[notification.type])} />
+        
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium leading-relaxed">
+            {notification.message}
+          </p>
+        </div>
+
+        <button
+          onClick={() => onRemove(notification.id)}
+          aria-label="Închide notificarea"
+          className="flex-shrink-0 p-1.5 -mr-1.5 -mt-1.5 rounded-lg opacity-50 hover:opacity-100 hover:bg-black/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </motion.div>
+    );
+  }
+);
+
+// Nume de afișare necesar când folosim forwardRef (ajută la debugging)
+NotificationItem.displayName = "NotificationItem";
+
+export function NotificationContainer() {
+  const { notifications, removeNotification } = useApp();
+
+  return (
+    <div 
+      // pointer-events-none e CRITIC aici. Permite utilizatorului să dea click "prin" acest container
+      // z-[150] asigură că va sta peste orice modal posibil
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center gap-3 w-full max-w-sm px-4 pointer-events-none"
+    >
+      {/* mode="popLayout" previne salturile bruște în DOM când un element iese din scenă */}
+      <AnimatePresence mode="popLayout">
+        {notifications.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            onRemove={removeNotification}
+          />
+        ))}
+      </AnimatePresence>
+    </div>
   );
 }
 </file>
@@ -4562,6 +4639,477 @@ export function ProfileModal() {
 }
 </file>
 
+<file path="components/requests/RequestDetailModal.tsx">
+import React from "react";
+import {
+  Calendar, Building, Briefcase, User, Mail, Phone,
+  MapPin, Hash, Clock, Edit, Trash2, CheckCircle,
+  XCircle, RotateCcw,
+} from "lucide-react";
+import { Modal } from "../common/Modal";
+import { Badge } from "../common/Badge";
+import { Button } from "../common/Button";
+import { Request, RequestStatus } from "@/types";
+import { formatDateTime, formatDate } from "@/utils/helpers";
+
+interface RequestDetailModalProps {
+  request: Request | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdateStatus?: (id: string, status: RequestStatus) => void;
+  onEdit?: (request: Request) => void;
+  onDelete?: (request: Request) => void;
+}
+
+export function RequestDetailModal({
+  request,
+  isOpen,
+  onClose,
+  onUpdateStatus,
+  onEdit,
+  onDelete,
+}: RequestDetailModalProps) {
+  if (!request) return null;
+
+  // REPARAT: Acum folosim "request.provider?.name" pentru că datele vin din JOIN-ul Supabase
+  const detailFields = [
+    { icon: Building, label: "Furnizor", value: request.provider?.name || "Necunoscut" },
+    { icon: Hash, label: "CUI Furnizor", value: request.provider?.cui || "-" },
+    { icon: Briefcase, label: "Serviciu", value: request.service?.name || "Necunoscut" },
+    { icon: Calendar, label: "Data Creării", value: formatDateTime(request.createdAt) },
+    { icon: Clock, label: "Ultima Actualizare", value: formatDateTime(request.updatedAt) },
+    { icon: User, label: "Persoană Contact", value: request.contactPerson.name },
+    { icon: Mail, label: "Email Contact", value: request.contactPerson.email },
+    { icon: Phone, label: "Telefon Contact", value: request.contactPerson.phone },
+    { icon: MapPin, label: "Localitate", value: request.locality },
+  ];
+
+  if (request.estimatedStartDate) {
+    detailFields.push({
+      icon: Calendar,
+      label: "Data Estimată Început",
+      value: formatDate(request.estimatedStartDate),
+    });
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Detalii Cerere" size="lg">
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-semibold text-primary-900">{request.title}</h3>
+            <p className="text-lg text-primary-500 mt-1">{request.description}</p>
+          </div>
+          <Badge status={request.status} size="lg" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {detailFields.map((field, index) => {
+            const Icon = field.icon;
+            return (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-3 rounded-md bg-primary-50/70 border border-primary-100/50"
+              >
+                <div className="w-10 h-10 rounded-md bg-white flex items-center justify-center flex-shrink-0 shadow-sm border border-primary-100/50">
+                  <Icon className="w-5 h-5 text-primary-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg text-primary-400">{field.label}</p>
+                  <p className="text-lg font-medium text-primary-900 truncate">{field.value}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {onUpdateStatus && (
+          <div className="p-4 rounded-md bg-primary-50/50 border border-primary-100/50">
+            <p className="text-lg font-medium text-primary-700 mb-3">Schimbă Status</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  onUpdateStatus(request.id, "accepted");
+                  onClose();
+                }}
+                disabled={request.status === "accepted"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Acceptă
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateStatus(request.id, "rejected");
+                  onClose();
+                }}
+                disabled={request.status === "rejected"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <XCircle className="w-4 h-4" />
+                Respinge
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateStatus(request.id, "pending");
+                  onClose();
+                }}
+                disabled={request.status === "pending"}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-lg font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Pending
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ⚠️ REPARAT: Blocăm editarea/ștergerea dacă cererea nu mai este în așteptare */}
+        {request.status === "pending" && (
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-primary-100">
+            {onEdit && (
+              <Button
+                variant="outline"
+                leftIcon={<Edit className="w-4 h-4" />}
+                onClick={() => {
+                  onEdit(request);
+                  onClose();
+                }}
+              >
+                Editează
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-50"
+                leftIcon={<Trash2 className="w-4 h-4" />}
+                onClick={() => {
+                  onDelete(request);
+                  onClose();
+                }}
+              >
+                Șterge
+              </Button>
+            )}
+          </div>
+        )}
+
+      </div>
+    </Modal>
+  );
+}
+</file>
+
+<file path="pages/dashboards/PrimarieDashboard.tsx">
+import React from "react";
+import { Link } from "react-router-dom";
+import { Plus, LayoutDashboard, Loader2, AlertOctagon } from "lucide-react";
+import { RequestList } from "@/components/requests/RequestList";
+import { SearchBar } from "@/components/common/SearchBar";
+import { Button } from "@/components/common/Button";
+import { useApp } from "@/context/AppContext";
+
+export function PrimarieDashboard() {
+  const { filteredRequests, filters, setFilter, isLoadingRequests, municipality } = useApp();
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-md bg-gradient-to-br from-sky-600 to-sky-800 flex items-center justify-center shadow-sm">
+            <LayoutDashboard className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Panou Primărie</h1>
+            <p className="text-slate-500">Gestionează cererile tale către furnizori</p>
+          </div>
+        </div>
+        
+        {/* Buton ascuns dacă primăria e blocată */}
+        {!municipality.isBlocked && (
+          <Link to="/create-request">
+            <Button variant="primary" leftIcon={<Plus className="w-5 h-5" />}>Cerere Nouă</Button>
+          </Link>
+        )}
+      </div>
+
+      {/* BANNER ROȘU PENTRU BLOCARE */}
+      {municipality.isBlocked && (
+        <div className="bg-rose-50 border-2 border-rose-200 p-6 rounded-2xl flex items-start gap-4">
+          <div className="bg-rose-100 p-3 rounded-full shrink-0 mt-1">
+            <AlertOctagon className="w-7 h-7 text-rose-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-rose-900 mb-1">Acces Restricționat</h3>
+            <p className="text-rose-700 font-medium mb-3">
+              Contul acestei instituții a fost suspendat de către un administrator. Puteți vizualiza istoricul, dar nu mai aveți dreptul să plasați cereri noi.
+            </p>
+            <div className="bg-white/60 px-4 py-2.5 rounded-lg border border-rose-100 text-rose-800 text-sm inline-block">
+              <span className="font-bold uppercase tracking-wider text-xs mr-2 text-rose-500">Motivul Suspendării:</span> 
+              <span className="font-medium">{municipality.blockReason || "Nespecificat"}</span>
+            </div>
+            <p className="text-sm text-rose-500 mt-3 font-medium">Pentru contestații, vă rugăm să contactați suportul tehnic Centria.</p>
+          </div>
+        </div>
+      )}
+
+      <SearchBar value={filters.searchQuery || ""} onChange={(v) => setFilter("searchQuery", v)} placeholder="Caută în cererile tale..." />
+
+      {isLoadingRequests ? (
+        <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>
+      ) : (
+        <RequestList requests={filteredRequests} title="Cererile Mele" />
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="services/municipalityService.ts">
+import { supabase } from "@/lib/supabase";
+import { Database } from "@/types/database";
+import { Municipality } from "@/types";
+// Extragem tipurile corecte din structura Supabase
+type DbMunicipality = Database["public"]["Tables"]["municipalities"]["Row"];
+type DbMunicipalityInsert = Database["public"]["Tables"]["municipalities"]["Insert"];
+
+function mapDbMunicipalityToMunicipality(db: DbMunicipality | any): Municipality {
+  return {
+    id: db.id, 
+    name: db.name, 
+    cui: db.cui,
+    contactPerson: { name: db.contact_person, email: db.email, phone: db.phone },
+    locality: db.locality,
+    isBlocked: db.is_blocked || false, // <-- NOU
+    blockReason: db.block_reason || undefined, // <-- NOU
+  };
+}
+
+export async function fetchMunicipality(): Promise<Municipality | null> {
+  const { data, error } = await supabase.from("municipalities").select("*").limit(1).single();
+  if (error) return null;
+  return data ? mapDbMunicipalityToMunicipality(data) : null;
+}
+
+export async function fetchAllMunicipalities(): Promise<Municipality[]> {
+  const { data, error } = await supabase.from("municipalities").select("*").order("name");
+  if (error) throw error;
+  return (data || []).map(mapDbMunicipalityToMunicipality);
+}
+
+// NOU: Funcție pentru Admin
+export async function createMunicipality(payload: DbMunicipalityInsert): Promise<Municipality> {
+  const { data, error } = await supabase.from("municipalities").insert([payload]).select().single();
+  if (error) throw error;
+  return mapDbMunicipalityToMunicipality(data);
+}
+</file>
+
+<file path="services/requestService.ts">
+import { supabase } from "@/lib/supabase";
+import { Request, RequestStatus, UserProfile } from "@/types";
+
+function mapDbRequestToRequest(dbRequest: any): Request {
+  return {
+    id: dbRequest.id,
+    title: dbRequest.title,
+    description: dbRequest.description || "",
+    status: dbRequest.status as RequestStatus,
+    municipalityId: dbRequest.municipality_id || "",
+    municipality: dbRequest.municipality || { name: "Necunoscut", cui: "-", locality: dbRequest.locality },
+    contactPerson: {
+      name: dbRequest.contact_person || "",
+      email: dbRequest.contact_email || "",
+      phone: dbRequest.contact_phone || "",
+    },
+    locality: dbRequest.locality || "",
+    serviceId: dbRequest.service_id || "",
+    service: dbRequest.service || { name: "Serviciu Necunoscut" },
+    providerId: dbRequest.provider_id || "",
+    provider: dbRequest.provider || { name: "Furnizor Necunoscut", cui: "-" },
+    createdAt: dbRequest.created_at || new Date().toISOString(),
+    estimatedStartDate: dbRequest.estimated_start_date || undefined,
+    updatedAt: dbRequest.updated_at || new Date().toISOString(),
+  };
+}
+
+export const requestService = {
+  async fetchAll(profile: UserProfile | null): Promise<Request[]> {
+    let query = supabase
+      .from("requests")
+      .select(`*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)`)
+      .order("created_at", { ascending: false });
+
+    if (profile?.role === "primarie" && profile.entityId) {
+      query = query.eq("municipality_id", profile.entityId);
+    } else if (profile?.role === "furnizor" && profile.entityId) {
+      query = query.eq("provider_id", profile.entityId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("❌ EROARE FETCH CERERI:", error);
+      throw error;
+    }
+    return (data || []).map(mapDbRequestToRequest);
+  },
+
+  async create(request: Omit<Request, "id" | "createdAt" | "updatedAt">): Promise<Request> {
+    // REPARAT: Ne asigurăm că string-urile goale ("") devin `null` pentru coloanele care sunt chei străine (UUID)
+    const dbPayload = {
+      title: request.title,
+      description: request.description,
+      status: request.status,
+      municipality_id: request.municipalityId || null,
+      contact_person: request.contactPerson.name,
+      contact_email: request.contactPerson.email,
+      contact_phone: request.contactPerson.phone,
+      locality: request.locality,
+      // Dacă e string gol sau "none", trimitem null ca să nu crape baza de date
+      service_id: (request.serviceId && request.serviceId !== "none") ? request.serviceId : null,
+      provider_id: (request.providerId && request.providerId !== "none") ? request.providerId : null,
+      estimated_start_date: request.estimatedStartDate || null,
+    };
+
+    console.log("Trimitem către Supabase:", dbPayload);
+
+    const { data, error } = await supabase
+      .from("requests")
+      .insert([dbPayload])
+      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
+      .single();
+      
+    if (error) {
+      // Acum vom vedea exact DE CE crapă baza de date direct în consola browserului
+      console.error("❌ EROARE CRITICĂ LA CREAREA CERERII:", error);
+      throw error;
+    }
+    
+    return mapDbRequestToRequest(data);
+  },
+
+  async update(id: string, updates: Partial<Request>): Promise<Request> {
+    const dbUpdates: any = { updated_at: new Date().toISOString() };
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.title) dbUpdates.title = updates.title;
+    if (updates.description) dbUpdates.description = updates.description;
+    if (updates.estimatedStartDate !== undefined) dbUpdates.estimated_start_date = updates.estimatedStartDate;
+
+    const { data, error } = await supabase
+      .from("requests")
+      .update(dbUpdates)
+      .eq("id", id)
+      .select('*, municipality:municipalities(name, cui, locality), provider:providers(name, cui), service:services(name)')
+      .single();
+      
+    if (error) {
+      console.error("❌ EROARE LA UPDATE:", error);
+      throw error;
+    }
+    return mapDbRequestToRequest(data);
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from("requests").delete().eq("id", id);
+    if (error) {
+      console.error("❌ EROARE LA ȘTERGERE:", error);
+      throw error;
+    }
+  }
+};
+</file>
+
+<file path="types/index.ts">
+export type RequestStatus = "accepted" | "rejected" | "pending";
+
+// Găsește interfața Municipality și actualizeaz-o așa:
+export interface Municipality {
+  id: string;
+  name: string;
+  cui: string;
+  contactPerson: { name: string; email: string; phone: string; };
+  locality: string;
+  isBlocked?: boolean; // <-- NOU
+  blockReason?: string; // <-- NOU
+}
+
+export interface Provider {
+  id: string;
+  name: string;
+  cui: string;
+  services: string[];
+}
+
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+}
+
+// Adaugă documentUrl în interfața Request
+export interface Request {
+  id: string;
+  title: string;
+  description: string;
+  status: RequestStatus;
+  municipalityId: string;
+  municipality?: { name: string; cui: string; locality: string };
+  contactPerson: { name: string; email: string; phone: string; };
+  locality: string;
+  serviceId: string;
+  service?: { name: string };
+  providerId: string;
+  provider?: { name: string; cui: string };
+  createdAt: string;
+  estimatedStartDate?: string;
+  updatedAt: string;
+  documentUrl?: string; // <--- NOU: Adăugat pentru fișiere
+}
+
+export interface Notification {
+  id: string;
+  type: "success" | "error" | "info" | "warning";
+  message: string;
+  timestamp: number;
+}
+
+export interface DashboardStats {
+  total: number;
+  accepted: number;
+  rejected: number;
+  pending: number;
+}
+
+export interface FilterOptions {
+  status?: RequestStatus | "all";
+  providerId?: string;
+  serviceId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  searchQuery?: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export type AppRole = "admin" | "primarie" | "furnizor";
+
+export interface UserProfile {
+  id: string;
+  role: AppRole;
+  entityId: string | null;
+}
+
+export interface UserSession {
+  user: any;
+  profile: UserProfile | null;
+  access_token: string;
+}
+</file>
+
 <file path="context/AppContext.tsx">
 import { createContext, useContext, ReactNode, useEffect } from "react";
 import { useRequests } from "@/hooks/useRequests";
@@ -4712,7 +5260,7 @@ export function useMunicipality(profile: UserProfile | null) {
             .single();
             
           if (data && !error) {
-            setMunicipality({
+           setMunicipality({
               id: data.id,
               name: data.name,
               cui: data.cui,
@@ -4722,6 +5270,8 @@ export function useMunicipality(profile: UserProfile | null) {
                 phone: data.phone,
               },
               locality: data.locality,
+              isBlocked: data.is_blocked, // NOU
+              blockReason: data.block_reason, // NOU
             });
           }
         } catch (err) {
@@ -4757,7 +5307,7 @@ export function useMunicipality(profile: UserProfile | null) {
 import React, { useState, useEffect } from "react";
 import { 
   ShieldCheck, Users, Building, Briefcase, FileText, 
-  Loader2, Key, Eye, Edit2, Trash2, AlertTriangle, Pencil, Plus
+  Key, Eye, Trash2, AlertTriangle, Pencil, Plus, Ban, CheckCircle
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/common/Button";
@@ -4770,12 +5320,13 @@ import { fetchAllMunicipalities, createMunicipality } from "@/services/municipal
 import { adminService, AdminUserView } from "@/services/adminService";
 import { RequestList } from "@/components/requests/RequestList";
 import { Municipality, Provider, AppRole, RequestStatus } from "@/types";
+import { TableSkeleton } from "@/components/common/Skeleton";
 
 type TabType = 'cereri' | 'utilizatori' | 'primarii' | 'furnizori';
-type ModalAction = 'detail' | 'editUser' | 'deleteUser' | 'password' | 'addMun' | 'editMun' | 'addProv' | 'editProv' | null;
+type ModalAction = 'detail' | 'editUser' | 'deleteUser' | 'password' | 'addMun' | 'editMun' | 'addProv' | 'editProv' | 'deleteEntity' | 'blockMun' | 'viewRequests' | null;
 
 export function AdminDashboard() {
-  const { filteredRequests, updateRequest, notifyError } = useApp();
+  const { filteredRequests, requests, updateRequest, notifyError, notifySuccess } = useApp();
   const [activeTab, setActiveTab] = useState<TabType>('cereri');
 
   const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
@@ -4788,34 +5339,21 @@ export function AdminDashboard() {
   const [selectedUser, setSelectedUser] = useState<AdminUserView | null>(null);
   const [selectedEntity, setSelectedEntity] = useState<Municipality | Provider | null>(null);
 
-  useEffect(() => {
-    loadAdminData();
-  }, []);
+  useEffect(() => { loadAdminData(); }, []);
 
   const loadAdminData = async () => {
     setIsLoadingExtra(true);
     try {
-      const [muns, usrs, provs] = await Promise.all([
-        fetchAllMunicipalities(),
-        adminService.getAllUsers(),
-        fetchProviders()
-      ]);
-      setMunicipalities(muns);
-      setUsers(usrs);
-      setAdminProviders(provs);
-    } catch (err) {
-      console.error(err);
-      notifyError("Eroare la încărcarea datelor administrative.");
-    } finally {
-      setIsLoadingExtra(false);
-    }
+      const [muns, usrs, provs] = await Promise.all([ fetchAllMunicipalities(), adminService.getAllUsers(), fetchProviders() ]);
+      setMunicipalities(muns); setUsers(usrs); setAdminProviders(provs);
+    } catch (err) { notifyError("Eroare la încărcarea datelor administrative."); } 
+    finally { setIsLoadingExtra(false); }
   };
 
   const getEntityName = (role: AppRole | null, entityId: string | null) => {
     if (role === 'admin') return "Sistem Centria";
-    if (!role || !entityId) return "-";
-    if (role === 'primarie') return municipalities.find(m => m.id === entityId)?.name || "Necunoscut";
-    if (role === 'furnizor') return adminProviders.find(p => p.id === entityId)?.name || "Necunoscut";
+    if (role === 'primarie') return municipalities.find(m => m.id === entityId)?.name || "-";
+    if (role === 'furnizor') return adminProviders.find(p => p.id === entityId)?.name || "-";
     return "-";
   };
 
@@ -4828,268 +5366,189 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-6 p-1 md:p-3">
+      {/* Header */}
       <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-5">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center shadow-lg shadow-purple-100 border-4 border-white">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center shadow-lg border-4 border-white">
           <ShieldCheck className="w-7 h-7 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Panou Administrator</h1>
-          <p className="text-slate-500 font-medium">Gestiunea centralizată a sistemului și accesului</p>
+          <h1 className="text-3xl font-bold text-slate-900">Panou Administrator</h1>
+          <p className="text-slate-500 font-medium">Gestiunea centralizată a sistemului și moderație</p>
         </div>
       </div>
 
-      {/* Navigație Tab-uri */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4 mb-6 bg-white p-2 rounded-xl shadow-inner border border-slate-100 overflow-x-auto">
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4 mb-6 bg-white p-2 rounded-xl shadow-inner overflow-x-auto">
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all duration-200 whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-200 scale-105'
-                : 'text-slate-600 hover:bg-purple-50 hover:text-purple-700'
-            }`}
-          >
+          <button key={tab.id} onClick={() => setActiveTab(tab.id as TabType)} className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all duration-200 whitespace-nowrap ${activeTab === tab.id ? 'bg-purple-600 text-white shadow-md' : 'text-slate-600 hover:bg-purple-50'}`}>
             <tab.icon className="w-4 h-4" /> {tab.label}
           </button>
         ))}
       </div>
 
-      {/* --- TAB: CERERI --- */}
+      {/* TAB CERERI */}
       {activeTab === 'cereri' && (
-        <RequestList 
-          requests={filteredRequests} 
-          emptyMessage="Nu există nicio cerere în sistem." 
-          title="Toate Cererile din Platformă" 
-          onUpdateStatus={(id: string, status: RequestStatus) => updateRequest(id, { status })} 
-        />
+        <RequestList requests={filteredRequests} emptyMessage="Nu există nicio cerere în sistem." title="Toate Cererile din Platformă" onUpdateStatus={(id, status) => updateRequest(id, { status })} />
       )}
 
-      {/* --- TAB: UTILIZATORI --- */}
+      {/* TAB UTILIZATORI */}
       {activeTab === 'utilizatori' && (
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-x-auto shadow-sm">
           {isLoadingExtra ? (
-            <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div>
+            <TableSkeleton columns={4} rows={6} />
           ) : (
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse min-w-[900px]">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="p-5 font-bold text-sm text-slate-600 uppercase tracking-wider">Email Utilizator</th>
-                    <th className="p-5 font-bold text-sm text-slate-600 uppercase tracking-wider w-44">Rol Functional</th>
-                    <th className="p-5 font-bold text-sm text-slate-600 uppercase tracking-wider">Instituție Asociată</th>
-                    <th className="p-5 font-bold text-sm text-slate-600 uppercase tracking-wider text-right w-44">Acțiuni Profil</th>
+            <table className="w-full text-left min-w-[900px]">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr><th className="p-5 text-sm text-slate-600 uppercase">Email Utilizator</th><th className="p-5 text-sm text-slate-600 uppercase">Rol Functional</th><th className="p-5 text-sm text-slate-600 uppercase">Instituție Asociată</th><th className="p-5 text-right uppercase text-slate-600">Acțiuni Profil</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {users.map(u => (
+                  <tr key={u.id} className="hover:bg-purple-50/30">
+                    <td className="p-5 font-semibold text-slate-950">{u.email}</td>
+                    <td className="p-5"><span className="inline-flex px-3 py-1 rounded-full text-xs font-bold border bg-slate-100 uppercase">{u.role || "Fără Rol"}</span></td>
+                    <td className="p-5 font-medium text-slate-800">{getEntityName(u.role, u.entityId)}</td>
+                    <td className="p-5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button onClick={() => { setSelectedUser(u); setModalType('editUser'); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => { setSelectedUser(u); setModalType('password'); }} className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg"><Key className="w-4 h-4" /></button>
+                        <button onClick={() => { setSelectedUser(u); setModalType('deleteUser'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {users.map(u => (
-                    <tr key={u.id} className="hover:bg-purple-50/30 transition-colors">
-                      <td className="p-5 font-semibold text-slate-950">{u.email}</td>
-                      <td className="p-5">
-                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold capitalize border ${
-                          u.role === 'admin' ? 'bg-purple-50 text-purple-800 border-purple-200' : 
-                          u.role === 'primarie' ? 'bg-sky-50 text-sky-800 border-sky-200' : 
-                          u.role === 'furnizor' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 
-                          'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}>
-                          {u.role || "Fără Rol"}
-                        </span>
-                      </td>
-                      <td className="p-5 font-medium text-slate-800 truncate max-w-[250px]">
-                        {getEntityName(u.role, u.entityId)}
-                      </td>
-                      <td className="p-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button onClick={() => { setSelectedUser(u); setModalType('detail'); }} className="p-2.5 text-sky-600 hover:bg-sky-100 rounded-lg transition-colors" title="Detalii">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setSelectedUser(u); setModalType('editUser'); }} className="p-2.5 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Editează Rol">
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setSelectedUser(u); setModalType('password'); }} className="p-2.5 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors" title="Resetează Parola">
-                            <Key className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setSelectedUser(u); setModalType('deleteUser'); }} className="p-2.5 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors" title="Șterge Cont">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       )}
 
-      {/* --- TAB: PRIMĂRII (Full Width List + Fancy Button) --- */}
+      {/* TAB PRIMĂRII */}
       {activeTab === 'primarii' && (
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
-                <Building className="w-6 h-6 text-purple-600" /> 
-                Primării Înregistrate ({municipalities.length})
-              </h3>
-              <p className="text-sm text-slate-500 mt-1">Lista tuturor entităților publice partenere din sistem.</p>
-            </div>
-            
-            {/* Butonul Fancy Corporatist */}
-            <button 
-              onClick={() => setModalType('addMun')}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 focus:ring-4 focus:ring-purple-500/30"
-            >
-              <Plus className="w-5 h-5" />
-              Adaugă Primărie Nouă
-            </button>
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr,2fr] gap-6 items-start">
+          <div className="bg-white p-7 rounded-2xl border border-slate-100 shadow-sm sticky top-6">
+            <h3 className="font-bold text-xl flex items-center gap-3 border-b pb-4 mb-4"><Building className="w-6 h-6 text-purple-600"/> Adaugă Primărie</h3>
+            <button onClick={() => setModalType('addMun')} className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl hover:bg-purple-700 flex items-center justify-center gap-2 shadow-md"><Plus /> Deschide Formularul</button>
           </div>
 
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="bg-white border-b border-slate-200">
-                  <th className="p-5 font-bold text-xs text-slate-500 uppercase tracking-wider">Denumire / CUI</th>
-                  <th className="p-5 font-bold text-xs text-slate-500 uppercase tracking-wider">Localitate</th>
-                  <th className="p-5 font-bold text-xs text-slate-500 uppercase tracking-wider">Date Contact Public</th>
-                  <th className="p-5 font-bold text-xs text-slate-500 uppercase tracking-wider text-right w-24">Acțiuni</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {municipalities.map(m => (
-                  <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-5">
-                      <div className="font-semibold text-slate-950 text-lg">{m.name}</div>
-                      <div className="text-xs font-mono bg-slate-100 inline-block px-2 py-0.5 rounded text-slate-600 mt-1">CUI: {m.cui}</div>
-                    </td>
-                    <td className="p-5 font-medium text-slate-700">{m.locality}</td>
-                    <td className="p-5">
-                      <div className="text-sm font-semibold text-slate-900">{m.contactPerson.name}</div>
-                      <div className="text-sm text-slate-600">{m.contactPerson.email}</div>
-                      <div className="text-sm text-slate-600">{m.contactPerson.phone}</div>
-                    </td>
-                    <td className="p-5 text-right">
-                      <button onClick={() => { setSelectedEntity(m); setModalType('editMun'); }} className="p-2.5 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Editează Date Publice">
-                        <Pencil className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {municipalities.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="p-16 text-center text-slate-500 font-medium text-lg">Nu există primării înregistrate în sistem. Apăsați pe butonul de mai sus pentru a adăuga prima entitate.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+            {isLoadingExtra ? (
+              <TableSkeleton columns={4} rows={5} />
+            ) : (
+              <table className="w-full text-left min-w-[800px]">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr><th className="p-5 text-xs text-slate-500 uppercase">Instituție</th><th className="p-5 text-xs text-slate-500 uppercase">Contact</th><th className="p-5 text-xs text-slate-500 uppercase text-center">Status Cont</th><th className="p-5 text-right text-xs text-slate-500 uppercase">Acțiuni Moderație</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {municipalities.map(m => (
+                    <tr key={m.id} className={m.isBlocked ? "bg-rose-50/50" : "hover:bg-slate-50"}>
+                      <td className="p-5"><div className="font-bold text-slate-900 text-lg">{m.name}</div><div className="text-xs font-mono mt-1 text-slate-500">CUI: {m.cui}</div></td>
+                      <td className="p-5"><div className="text-sm font-semibold">{m.contactPerson.name}</div><div className="text-xs text-slate-500">{m.contactPerson.phone}</div></td>
+                      <td className="p-5 text-center">
+                        {m.isBlocked ? <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs font-bold"><Ban className="w-3 h-3"/> Suspendat</span> : <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold"><CheckCircle className="w-3 h-3"/> Activ</span>}
+                      </td>
+                      <td className="p-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => { setSelectedEntity(m); setModalType('viewRequests'); }} className="p-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg text-xs font-bold flex items-center gap-1" title="Vezi & Gestionează Cereri"><Eye className="w-4 h-4"/> Cereri</button>
+                          <button onClick={() => { setSelectedEntity(m); setModalType('editMun'); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg" title="Editează Date"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => { setSelectedEntity(m); setModalType('blockMun'); }} className={`p-2 rounded-lg ${m.isBlocked ? "text-emerald-600 hover:bg-emerald-100" : "text-rose-600 hover:bg-rose-100"}`} title={m.isBlocked ? "Deblochează" : "Blochează Acces"}>{m.isBlocked ? <CheckCircle className="w-4 h-4"/> : <Ban className="w-4 h-4" />}</button>
+                          <button onClick={() => { setSelectedEntity(m); setModalType('deleteEntity'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg" title="Șterge Entitate"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {municipalities.length === 0 && (
+                    <tr><td colSpan={4} className="p-16 text-center text-slate-500 font-medium">Nu există primării înregistrate în sistem.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
 
-      {/* --- TAB: FURNIZORI (Full Width List + Fancy Button) --- */}
+      {/* TAB FURNIZORI */}
       {activeTab === 'furnizori' && (
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
-                <Briefcase className="w-6 h-6 text-emerald-600" /> 
-                Furnizori Înregistrați ({adminProviders.length})
-              </h3>
-              <p className="text-sm text-slate-500 mt-1">Lista companiilor care pot prelua cereri.</p>
-            </div>
-            
-            {/* Butonul Fancy Corporatist */}
-            <button 
-              onClick={() => setModalType('addProv')}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold px-6 py-3 rounded-xl shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 focus:ring-4 focus:ring-emerald-500/30"
-            >
-              <Plus className="w-5 h-5" />
-              Adaugă Furnizor Nou
-            </button>
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr,2fr] gap-6 items-start">
+          <div className="bg-white p-7 rounded-2xl border border-slate-100 shadow-sm sticky top-6">
+            <h3 className="font-bold text-xl flex items-center gap-3 border-b pb-4 mb-4"><Briefcase className="w-6 h-6 text-emerald-600"/> Adaugă Furnizor</h3>
+            <button onClick={() => setModalType('addProv')} className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-2 shadow-md"><Plus /> Deschide Formularul</button>
           </div>
 
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse min-w-[600px]">
-              <thead>
-                <tr className="bg-white border-b border-slate-200">
-                  <th className="p-5 font-bold text-xs text-slate-500 uppercase tracking-wider">Nume Companie / Furnizor</th>
-                  <th className="p-5 font-bold text-xs text-slate-500 uppercase tracking-wider w-40">CUI</th>
-                  <th className="p-5 font-bold text-xs text-slate-500 uppercase tracking-wider text-right w-24">Acțiuni</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {adminProviders.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="p-5 font-semibold text-slate-950 text-lg">{p.name}</td>
-                    <td className="p-5">
-                      <span className="font-mono bg-slate-100 px-2.5 py-1 rounded text-sm text-slate-700 border border-slate-200">{p.cui}</span>
-                    </td>
-                    <td className="p-5 text-right">
-                      <button onClick={() => { setSelectedEntity(p); setModalType('editProv'); }} className="p-2.5 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors" title="Editează Date Publice">
-                        <Pencil className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {adminProviders.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="p-16 text-center text-slate-500 font-medium text-lg">Nu există furnizori înregistrați în sistem.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+            {isLoadingExtra ? (
+              <TableSkeleton columns={3} rows={5} />
+            ) : (
+              <table className="w-full text-left min-w-[600px]">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr><th className="p-5 text-xs text-slate-500 uppercase">Companie</th><th className="p-5 text-xs text-slate-500 uppercase">CUI</th><th className="p-5 text-right text-xs text-slate-500 uppercase">Acțiuni</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {adminProviders.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50">
+                      <td className="p-5 font-bold text-slate-900">{p.name}</td>
+                      <td className="p-5 font-mono text-sm text-slate-500">{p.cui}</td>
+                      <td className="p-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button onClick={() => { setSelectedEntity(p); setModalType('editProv'); }} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => { setSelectedEntity(p); setModalType('deleteEntity'); }} className="p-2 text-rose-600 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {adminProviders.length === 0 && (
+                    <tr><td colSpan={3} className="p-16 text-center text-slate-500 font-medium">Nu există furnizori înregistrați în sistem.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* ZONA MODALELOR (Randate curat, fără pierdere de focus)    */}
-      {/* ========================================================= */}
-
-      {/* Modal Detalii Utilizator */}
-      <Modal isOpen={modalType === 'detail'} onClose={() => setModalType(null)} title="Detalii Securitate" size="sm">
-        {selectedUser && (
-          <div className="space-y-4">
-            <div className="p-5 bg-slate-50 rounded-xl border border-slate-100">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Email Autentificare</p>
-              <p className="font-bold text-lg text-slate-950">{selectedUser.email}</p>
-            </div>
-            <div className="p-5 bg-slate-50 rounded-xl border border-slate-100">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Instituție Asociată</p>
-              <p className="font-bold text-slate-950">{getEntityName(selectedUser.role, selectedUser.entityId)}</p>
-            </div>
-          </div>
-        )}
+      {/* ================= MODALE ================= */}
+      
+      <Modal isOpen={modalType === 'viewRequests'} onClose={() => setModalType(null)} title={`Cereri: ${selectedEntity?.name}`} size="xl">
+         <div className="bg-slate-50 p-4 -mx-6 -my-2 min-h-[500px]">
+           {selectedEntity && (
+             <RequestList 
+                requests={requests.filter(r => r.municipalityId === selectedEntity.id)} 
+                emptyMessage="Această primărie nu are cereri înregistrate." 
+                onUpdateStatus={(id, status) => updateRequest(id, { status })} 
+             />
+           )}
+         </div>
       </Modal>
 
-      {/* Modal Ștergere Utilizator */}
+      <Modal isOpen={modalType === 'blockMun'} onClose={() => setModalType(null)} size="sm">
+         {selectedEntity && 'locality' in selectedEntity && (
+           <FormBlockMunicipality entity={selectedEntity as Municipality} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
+         )}
+      </Modal>
+
+      <Modal isOpen={modalType === 'deleteEntity'} onClose={() => setModalType(null)} size="sm">
+         <FormDeleteEntity entity={selectedEntity} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
+      </Modal>
+
+      <Modal isOpen={modalType === 'addMun'} onClose={() => setModalType(null)} title="Înregistrare Primărie" size="md">
+        <FormAddMunicipality onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
+      </Modal>
+      <Modal isOpen={modalType === 'addProv'} onClose={() => setModalType(null)} title="Înregistrare Furnizor" size="md">
+        <FormAddProvider onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
+      </Modal>
+      <Modal isOpen={modalType === 'editMun'} onClose={() => setModalType(null)} title="Editează Primărie" size="md">
+        {selectedEntity && 'locality' in selectedEntity && <FormEditMunicipality entity={selectedEntity as Municipality} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />}
+      </Modal>
+      <Modal isOpen={modalType === 'editProv'} onClose={() => setModalType(null)} title="Editează Furnizor" size="md">
+        {selectedEntity && 'services' in selectedEntity && <FormEditProvider entity={selectedEntity as Provider} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />}
+      </Modal>
       <Modal isOpen={modalType === 'deleteUser'} onClose={() => setModalType(null)} size="sm">
         <FormDeleteUser user={selectedUser} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
       </Modal>
-
-      {/* Modale cu Formulare Extrase (Pentru a preveni pierderea focusului la tastare) */}
-      <Modal isOpen={modalType === 'password'} onClose={() => setModalType(null)} title="Resetare Parolă" size="sm">
+      <Modal isOpen={modalType === 'password'} onClose={() => setModalType(null)} title="Resetare Parolă Utilizator" size="sm">
         {selectedUser && <FormChangePassword user={selectedUser} onComplete={() => setModalType(null)} onCancel={() => setModalType(null)} />}
       </Modal>
-
-      <Modal isOpen={modalType === 'editUser'} onClose={() => setModalType(null)} title="Editează Rol Utilizator" size="sm">
+      <Modal isOpen={modalType === 'editUser'} onClose={() => setModalType(null)} title="Editează Rol" size="sm">
         {selectedUser && <FormEditUser user={selectedUser} muns={municipalities} provs={adminProviders} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />}
-      </Modal>
-
-      <Modal isOpen={modalType === 'addMun'} onClose={() => setModalType(null)} title="Înregistrare Primărie Nouă" size="md">
-        <FormAddMunicipality onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
-      </Modal>
-
-      <Modal isOpen={modalType === 'addProv'} onClose={() => setModalType(null)} title="Înregistrare Furnizor Nou" size="md">
-        <FormAddProvider onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />
-      </Modal>
-
-      <Modal isOpen={modalType === 'editMun'} onClose={() => setModalType(null)} title="Editează Date Primărie" size="md">
-        {selectedEntity && 'locality' in selectedEntity && <FormEditMunicipality entity={selectedEntity as Municipality} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />}
-      </Modal>
-
-      <Modal isOpen={modalType === 'editProv'} onClose={() => setModalType(null)} title="Editează Date Furnizor" size="md">
-        {selectedEntity && 'services' in selectedEntity && <FormEditProvider entity={selectedEntity as Provider} onComplete={() => { setModalType(null); loadAdminData(); }} onCancel={() => setModalType(null)} />}
       </Modal>
 
     </div>
@@ -5097,202 +5556,155 @@ export function AdminDashboard() {
 }
 
 // ============================================================================
-// COMPONENTE FORMULARE IZOLATE (Previn re-randarea globală și pierderea focusului)
+// COMPONENTE FORMULARE IZOLATE TIPPED (TypeScript Fixat)
 // ============================================================================
 
-function FormChangePassword({ user, onComplete, onCancel }: { user: AdminUserView, onComplete: () => void, onCancel: () => void }) {
-  const [pass, setPass] = useState("");
+function FormBlockMunicipality({ entity, onComplete, onCancel }: { entity: Municipality, onComplete: () => void, onCancel: () => void }) {
+  const [reason, setReason] = useState(entity.blockReason || "");
   const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useApp();
+  const isBlocking = !entity.isBlocked; 
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pass.length < 6) return notifyError("Minim 6 caractere.");
+    if (isBlocking && !reason) return notifyError("Trebuie să selectezi un motiv pentru blocare.");
     setLoading(true);
     try {
-      await adminService.changeUserPassword(user.id, pass);
-      notifySuccess("Parola a fost actualizată!");
+      const { error } = await supabase.from('municipalities').update({ 
+        is_blocked: isBlocking, 
+        block_reason: isBlocking ? reason : null 
+      }).eq('id', entity.id);
+      if (error) throw error;
+      notifySuccess(isBlocking ? "Primăria a fost suspendată." : "Primăria a fost deblocată.");
       onComplete();
-    } catch (err) { notifyError("Eroare la schimbarea parolei."); }
+    } catch (err) { notifyError("Eroare la actualizarea statusului."); }
     finally { setLoading(false); }
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4 pt-2">
-      <Input label="Noua Parolă" type="text" value={pass} onChange={e => setPass(e.target.value)} required leftIcon={<Key className="w-4 h-4 text-slate-400"/>} />
-      <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary" isLoading={loading}>Schimbă</Button></div>
+    <form onSubmit={submit} className="flex flex-col items-center text-center pt-2">
+      <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isBlocking ? 'bg-rose-100' : 'bg-emerald-100'}`}>
+        {isBlocking ? <Ban className="w-8 h-8 text-rose-600" /> : <CheckCircle className="w-8 h-8 text-emerald-600" />}
+      </div>
+      <h3 className="text-2xl font-bold text-slate-950 mb-2">{isBlocking ? "Suspendare Acces" : "Deblocare Acces"}</h3>
+      <p className="text-slate-600 mb-6 px-4">
+        {isBlocking ? `Primăria ${entity.name} nu va mai putea crea cereri noi.` : `Primăria ${entity.name} va avea din nou acces complet la platformă.`}
+      </p>
+
+      {isBlocking && (
+        <div className="w-full text-left mb-6 space-y-3">
+          <Select label="Motivul Suspendării (Vizibil pentru primărie)" value={reason} onChange={e => setReason(e.target.value)} options={[
+            { value: "", label: "Selectează un motiv..." },
+            { value: "Activitate suspectă / Spam", label: "Activitate suspectă / Spam" },
+            { value: "Informații de profil incomplete sau false", label: "Informații incomplete" },
+            { value: "Neplata facturilor către platformă", label: "Neplata facturilor" },
+            { value: "Încălcarea Termenilor și Condițiilor", label: "Încălcarea T&C" },
+            { value: "Cerere de suspendare la cerere", label: "La cerere" }
+          ]} />
+        </div>
+      )}
+
+      <div className="flex gap-3 w-full">
+        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Anulează</Button>
+        <Button type="submit" variant={isBlocking ? "danger" : "primary"} className="flex-1" isLoading={loading}>{isBlocking ? "Confirmă Blocarea" : "Deblochează"}</Button>
+      </div>
     </form>
   );
 }
 
-function FormDeleteUser({ user, onComplete, onCancel }: { user: AdminUserView | null, onComplete: () => void, onCancel: () => void }) {
+function FormDeleteEntity({ entity, onComplete, onCancel }: { entity: Municipality | Provider | null, onComplete: () => void, onCancel: () => void }) {
   const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useApp();
 
   const submit = async () => {
-    if (!user) return;
+    if (!entity) return;
     setLoading(true);
     try {
-      await adminService.deleteUser(user.id);
-      notifySuccess("Contul a fost șters!");
+      // 1. Tăiem legăturile: Îi lăsăm fără "entity_id" pe toți utilizatorii acestei entități
+      // Trimițând doar entity_id: null, evităm eroarea 400 legată de restricțiile coloanei "role"
+      await supabase
+        .from('user_profiles')
+        .update({ entity_id: null })
+        .eq('entity_id', entity.id);
+
+      // 2. Ștergem entitatea (Cererile asociate se vor șterge automat în cascadă)
+      const table = 'locality' in entity ? 'municipalities' : 'providers';
+      const { error } = await supabase.from(table).delete().eq('id', entity.id);
+      
+      if (error) throw error;
+      
+      notifySuccess("Entitatea a fost ștearsă definitiv!");
       onComplete();
-    } catch (err: any) { notifyError(err.message || "Eroare la ștergere."); }
+    } catch (err: any) { 
+      console.error("Detalii eroare ștergere:", err);
+      notifyError(err.message || "Eroare la ștergere. Verificați consola."); 
+    }
     finally { setLoading(false); }
   };
 
   return (
     <div className="flex flex-col items-center text-center pt-2">
-      <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mb-5 border-4 border-rose-50"><AlertTriangle className="w-8 h-8 text-rose-600" /></div>
-      <h3 className="text-2xl font-bold text-slate-950 mb-2">Ștergere Cont</h3>
-      <p className="text-slate-600 mb-8">Sigur vrei să ștergi contul <strong>{user?.email}</strong>?</p>
-      <div className="flex gap-3 w-full"><Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Anulează</Button><Button type="button" variant="danger" className="flex-1" onClick={submit} isLoading={loading}>Șterge</Button></div>
+      <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center mb-5">
+        <Trash2 className="w-8 h-8 text-rose-600" />
+      </div>
+      <h3 className="text-2xl font-bold text-slate-950 mb-2">Ștergere Definitivă</h3>
+      <p className="text-slate-600 mb-8 text-sm">
+        Sigur vrei să ștergi <strong>{entity?.name}</strong>? Conturile utilizatorilor asociați vor fi detașate (fără acces), iar cererile înregistrate vor fi șterse!
+      </p>
+      <div className="flex gap-3 w-full">
+        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Anulează</Button>
+        <Button type="button" variant="danger" className="flex-1" onClick={submit} isLoading={loading}>Confirmă Ștergerea</Button>
+      </div>
     </div>
   );
 }
 
+function FormChangePassword({ user, onComplete, onCancel }: { user: AdminUserView, onComplete: () => void, onCancel: () => void }) {
+  const [pass, setPass] = useState("");
+  const { notifySuccess, notifyError } = useApp();
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); try { await adminService.changeUserPassword(user.id, pass); notifySuccess("Succes!"); onComplete(); } catch { notifyError("Eroare"); } };
+  return <form onSubmit={submit} className="space-y-4 pt-2"><Input label="Parolă nouă" value={pass} onChange={e=>setPass(e.target.value)} required /><div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary">Salvează</Button></div></form>;
+}
+
+function FormDeleteUser({ user, onComplete, onCancel }: { user: AdminUserView | null, onComplete: () => void, onCancel: () => void }) {
+  const { notifySuccess, notifyError } = useApp();
+  const submit = async () => { if(!user) return; try { await adminService.deleteUser(user.id); notifySuccess("Șters"); onComplete(); } catch { notifyError("Eroare"); } };
+  return <div className="text-center pt-2"><p className="mb-6">Ștergi utilizatorul <b>{user?.email}</b>?</p><div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={onCancel}>Anulează</Button><Button variant="danger" className="flex-1" onClick={submit}>Șterge</Button></div></div>;
+}
+
 function FormEditUser({ user, muns, provs, onComplete, onCancel }: { user: AdminUserView, muns: Municipality[], provs: Provider[], onComplete: () => void, onCancel: () => void }) {
   const [data, setData] = useState({ role: user.role || 'none', entityId: user.entityId || 'none' });
-  const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useApp();
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await adminService.updateUserMapping(user.id, data.role === 'none' ? null : data.role as AppRole, data.entityId === 'none' ? null : data.entityId);
-      notifySuccess("Asociere actualizată!");
-      onComplete();
-    } catch (err) { notifyError("Eroare la salvare."); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4 pt-2">
-      <Select label="Rol Sistem" value={data.role} onChange={e => setData({ role: e.target.value, entityId: 'none' })} options={[{ value: "none", label: "Fără Rol" }, { value: "admin", label: "Admin" }, { value: "primarie", label: "Primărie" }, { value: "furnizor", label: "Furnizor" }]} />
-      {data.role !== 'admin' && data.role !== 'none' && (
-        <Select label="Asociază Instituție" value={data.entityId} onChange={e => setData({ ...data, entityId: e.target.value })} options={[{ value: "none", label: "Alege..." }, ...(data.role === 'primarie' ? muns : provs).map(x => ({ value: x.id, label: x.name }))]} />
-      )}
-      <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary" isLoading={loading}>Salvează</Button></div>
-    </form>
-  );
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); try { await adminService.updateUserMapping(user.id, data.role as AppRole | null, data.entityId); notifySuccess("Salvat"); onComplete(); } catch { notifyError("Eroare"); } };
+  return <form onSubmit={submit} className="space-y-4 pt-2"><Select label="Rol" value={data.role} onChange={e=>setData({role:e.target.value, entityId:'none'})} options={[{value:'none',label:'Fără'},{value:'admin',label:'Admin'},{value:'primarie',label:'Primărie'},{value:'furnizor',label:'Furnizor'}]} />{data.role!=='admin'&&data.role!=='none'&&<Select label="Instituție" value={data.entityId} onChange={e=>setData({...data,entityId:e.target.value})} options={[{value:'none',label:'Alege...'},...(data.role==='primarie'?muns:provs).map(x=>({value:x.id,label:x.name}))]} />}<div className="flex justify-end gap-2"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary">Salvează</Button></div></form>;
 }
 
 function FormAddMunicipality({ onComplete, onCancel }: { onComplete: () => void, onCancel: () => void }) {
   const [d, setD] = useState({ name: '', cui: '', contact_person: '', email: '', phone: '', locality: '', password: '' });
-  const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useApp();
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (d.password.length < 6) return notifyError("Parola minim 6 caractere.");
-    setLoading(true);
-    try {
-      const newMun = await createMunicipality({ name: d.name, cui: d.cui, contact_person: d.contact_person, email: d.email, phone: d.phone, locality: d.locality });
-      await adminService.createUserAccountAndMap(d.email, d.password, 'primarie', newMun.id);
-      notifySuccess("Primăria a fost creată!");
-      onComplete();
-    } catch (err: any) { notifyError(err.message || "Eroare."); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4 pt-2">
-      <Input label="Denumire Instituție" value={d.name} onChange={e => setD({...d, name: e.target.value})} required />
-      <div className="grid grid-cols-2 gap-4"><Input label="CUI" value={d.cui} onChange={e => setD({...d, cui: e.target.value})} required /><Input label="Localitate" value={d.locality} onChange={e => setD({...d, locality: e.target.value})} required /></div>
-      <Input label="Persoană Contact" value={d.contact_person} onChange={e => setD({...d, contact_person: e.target.value})} required />
-      <Input label="Telefon Contact" value={d.phone} onChange={e => setD({...d, phone: e.target.value})} required />
-      <div className="pt-4 border-t border-slate-100 mt-2 space-y-4">
-        <Input label="Email Autentificare" type="email" value={d.email} onChange={e => setD({...d, email: e.target.value})} required />
-        <Input label="Parolă Acces" type="text" value={d.password} onChange={e => setD({...d, password: e.target.value})} required />
-      </div>
-      <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary" isLoading={loading}>Înregistrează</Button></div>
-    </form>
-  );
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); try { const newMun = await createMunicipality(d); await adminService.createUserAccountAndMap(d.email, d.password, 'primarie', newMun.id); notifySuccess("Creat"); onComplete(); } catch { notifyError("Eroare"); } };
+  return <form onSubmit={submit} className="space-y-4"><Input label="Nume" value={d.name} onChange={e=>setD({...d,name:e.target.value})} required /><Input label="CUI" value={d.cui} onChange={e=>setD({...d,cui:e.target.value})} required /><Input label="Localitate" value={d.locality} onChange={e=>setD({...d,locality:e.target.value})} required /><Input label="Contact" value={d.contact_person} onChange={e=>setD({...d,contact_person:e.target.value})} required /><Input label="Telefon" value={d.phone} onChange={e=>setD({...d,phone:e.target.value})} required /><Input label="Email Cont" value={d.email} onChange={e=>setD({...d,email:e.target.value})} required /><Input label="Parolă" value={d.password} onChange={e=>setD({...d,password:e.target.value})} required /><div className="flex justify-end gap-2"><Button variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary">Crează</Button></div></form>;
 }
 
 function FormEditMunicipality({ entity, onComplete, onCancel }: { entity: Municipality, onComplete: () => void, onCancel: () => void }) {
   const [d, setD] = useState({ name: entity.name, cui: entity.cui, locality: entity.locality, person: entity.contactPerson.name, phone: entity.contactPerson.phone });
-  const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useApp();
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.from('municipalities').update({ name: d.name, cui: d.cui, locality: d.locality, contact_person: d.person, phone: d.phone }).eq('id', entity.id);
-      if (error) throw error;
-      notifySuccess("Datele au fost salvate!");
-      onComplete();
-    } catch (err: any) { notifyError(err.message || "Eroare."); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4 pt-2">
-      <Input label="Denumire" value={d.name} onChange={e => setD({...d, name: e.target.value})} required />
-      <div className="grid grid-cols-2 gap-4"><Input label="CUI" value={d.cui} onChange={e => setD({...d, cui: e.target.value})} required /><Input label="Localitate" value={d.locality} onChange={e => setD({...d, locality: e.target.value})} required /></div>
-      <Input label="Persoană Contact" value={d.person} onChange={e => setD({...d, person: e.target.value})} required />
-      <Input label="Telefon" value={d.phone} onChange={e => setD({...d, phone: e.target.value})} required />
-      <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary" isLoading={loading}>Salvează Modificări</Button></div>
-    </form>
-  );
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); try { await supabase.from('municipalities').update({ name: d.name, cui: d.cui, locality: d.locality, contact_person: d.person, phone: d.phone }).eq('id', entity.id); notifySuccess("Salvat"); onComplete(); } catch { notifyError("Eroare"); } };
+  return <form onSubmit={submit} className="space-y-4"><Input label="Nume" value={d.name} onChange={e=>setD({...d,name:e.target.value})} required /><Input label="CUI" value={d.cui} onChange={e=>setD({...d,cui:e.target.value})} required /><Input label="Localitate" value={d.locality} onChange={e=>setD({...d,locality:e.target.value})} required /><Input label="Contact" value={d.person} onChange={e=>setD({...d,person:e.target.value})} required /><Input label="Telefon" value={d.phone} onChange={e=>setD({...d,phone:e.target.value})} required /><div className="flex justify-end gap-2"><Button variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary">Salvează</Button></div></form>;
 }
 
 function FormAddProvider({ onComplete, onCancel }: { onComplete: () => void, onCancel: () => void }) {
   const [d, setD] = useState({ name: '', cui: '', email: '', password: '' });
-  const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useApp();
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (d.password.length < 6) return notifyError("Parola minim 6 caractere.");
-    setLoading(true);
-    try {
-      const newProv = await createProvider(d.name, d.cui, d.email);
-      await adminService.createUserAccountAndMap(d.email, d.password, 'furnizor', newProv.id);
-      notifySuccess("Furnizorul a fost creat!");
-      onComplete();
-    } catch (err: any) { notifyError(err.message || "Eroare."); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4 pt-2">
-      <Input label="Nume Companie" value={d.name} onChange={e => setD({...d, name: e.target.value})} required />
-      <Input label="CUI" value={d.cui} onChange={e => setD({...d, cui: e.target.value})} required />
-      <div className="pt-4 border-t border-slate-100 mt-2 space-y-4">
-        <Input label="Email Autentificare" type="email" value={d.email} onChange={e => setD({...d, email: e.target.value})} required />
-        <Input label="Parolă Acces" type="text" value={d.password} onChange={e => setD({...d, password: e.target.value})} required />
-      </div>
-      <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary" isLoading={loading}>Înregistrează</Button></div>
-    </form>
-  );
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); try { const p = await createProvider(d.name, d.cui, d.email); await adminService.createUserAccountAndMap(d.email, d.password, 'furnizor', p.id); notifySuccess("Creat"); onComplete(); } catch { notifyError("Eroare"); } };
+  return <form onSubmit={submit} className="space-y-4"><Input label="Nume" value={d.name} onChange={e=>setD({...d,name:e.target.value})} required /><Input label="CUI" value={d.cui} onChange={e=>setD({...d,cui:e.target.value})} required /><Input label="Email Cont" value={d.email} onChange={e=>setD({...d,email:e.target.value})} required /><Input label="Parolă" value={d.password} onChange={e=>setD({...d,password:e.target.value})} required /><div className="flex justify-end gap-2"><Button variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary">Crează</Button></div></form>;
 }
 
 function FormEditProvider({ entity, onComplete, onCancel }: { entity: Provider, onComplete: () => void, onCancel: () => void }) {
   const [d, setD] = useState({ name: entity.name, cui: entity.cui });
-  const [loading, setLoading] = useState(false);
   const { notifySuccess, notifyError } = useApp();
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.from('providers').update({ name: d.name, cui: d.cui }).eq('id', entity.id);
-      if (error) throw error;
-      notifySuccess("Datele au fost salvate!");
-      onComplete();
-    } catch (err: any) { notifyError(err.message || "Eroare."); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4 pt-2">
-      <Input label="Nume Companie" value={d.name} onChange={e => setD({...d, name: e.target.value})} required />
-      <Input label="CUI" value={d.cui} onChange={e => setD({...d, cui: e.target.value})} required />
-      <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary" isLoading={loading}>Salvează Modificări</Button></div>
-    </form>
-  );
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); try { await supabase.from('providers').update({ name: d.name, cui: d.cui }).eq('id', entity.id); notifySuccess("Salvat"); onComplete(); } catch { notifyError("Eroare"); } };
+  return <form onSubmit={submit} className="space-y-4"><Input label="Nume" value={d.name} onChange={e=>setD({...d,name:e.target.value})} required /><Input label="CUI" value={d.cui} onChange={e=>setD({...d,cui:e.target.value})} required /><div className="flex justify-end gap-2"><Button variant="ghost" onClick={onCancel}>Anulează</Button><Button type="submit" variant="primary">Salvează</Button></div></form>;
 }
 </file>
 
@@ -5300,16 +5712,18 @@ function FormEditProvider({ entity, onComplete, onCancel }: { entity: Provider, 
 import React, { useState } from "react";
 import { motion } from "motion/react";
 import { 
-  Building2, Mail, Lock, LogIn, AlertCircle, 
+  Mail, Lock, LogIn, AlertCircle, 
   ShieldCheck, Building, Briefcase 
 } from "lucide-react";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { authService } from "@/services/authService";
 import { useApp } from "@/context/AppContext";
+import { NetworkBackground } from "@/components/layout/NetworkBackground";
 
-// ⚠️ REPARAT: Conturile de test au fost golite pentru producție. 
-// Utilizatorul trebuie să își scrie manual parola reală din motive de securitate.
+// Importul logoului tău
+import logoImg from "@/assets/logo.png"; 
+
 const DEMO_ACCOUNTS = {
   admin: { email: "admin@centria.ro", password: "" },
   primarie: { email: "primarie@centria.ro", password: "" },
@@ -5352,8 +5766,6 @@ export function Login() {
     setEmail(acc.email);
     setPassword(acc.password);
     
-    // Dacă am setat o parolă în DEMO_ACCOUNTS, facem login instant.
-    // Altfel, doar completăm email-ul și lăsăm utilizatorul să scrie parola.
     if (acc.password) {
       performLogin(acc.email, acc.password);
     } else {
@@ -5362,33 +5774,44 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-sky-50">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md"
-      >
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl shadow-sky-100 overflow-hidden">
-          <div className="p-8">
-            {/* Branding */}
-            <div className="flex flex-col items-center mb-10">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-lg shadow-primary-200 mb-4">
-                <Building2 className="w-10 h-10 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Centria</h1>
-              <p className="text-slate-500 font-medium">Administrație Publică Inteligentă</p>
-            </div>
+    // Fundalul paginii primește același gradient ca header-ul pentru continuitate vizuală
+    <div className="min-h-screen relative flex items-center justify-center p-4 bg-gradient-to-br from-sky-900 via-sky-700 to-sky-600 overflow-hidden">
+      
+      {/* Rețeaua din fundal */}
+      <NetworkBackground />
 
-            {/* Formularul Clasic */}
-            <form onSubmit={handleManualLogin} className="space-y-5">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        // Card compact (max-w-md), garantează vizibilitatea totală fără scroll
+        className="w-full max-w-md relative z-10"
+      >
+        {/* Cardul principal: Fundal alb, margini rotunjite și o umbră spectaculoasă pentru adâncime */}
+        <div className="bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ring-1 ring-black/5">
+          
+          {/* HEADER CARD: Nuanța ta de albastru, cu efect de lumină subtil din partea de sus */}
+          <div className="relative bg-gradient-to-b from-sky-540 to-sky-800 py-8 px-6 flex flex-col items-center justify-center overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/20 via-transparent to-transparent opacity-70 pointer-events-none"></div>
+            
+            <img 
+              src={logoImg} 
+              alt="Logo" 
+              className="relative z-10 h-14 md:h-16 w-auto object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.2)] transition-transform duration-500 hover:scale-105" 
+            />
+          </div>
+
+          {/* CORP FORMULAR: Alb curat, text închis la culoare, ușor de privit */}
+          <div className="p-6 md:px-8 md:py-8">
+            <form onSubmit={handleManualLogin} className="space-y-4">
               {error && (
                 <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 text-rose-700 text-sm"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="p-3 bg-rose-50 border border-rose-100 rounded-lg flex items-start gap-2.5 text-rose-700 text-sm overflow-hidden"
                 >
-                  <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="font-medium">{error}</span>
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span className="font-medium leading-tight">{error}</span>
                 </motion.div>
               )}
 
@@ -5401,6 +5824,7 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 leftIcon={<Mail className="w-4 h-4 text-slate-400" />}
                 required
+                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
               />
 
               <div className="space-y-1">
@@ -5413,37 +5837,39 @@ export function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   leftIcon={<Lock className="w-4 h-4 text-slate-400" />}
                   required
+                  className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full py-6 text-lg font-bold shadow-lg shadow-primary-100"
+                // Buton principal asortat cu headerul, efect fin de ridicare la hover
+                className="w-full py-3.5 text-base font-semibold shadow-md bg-sky-600 hover:bg-sky-700 text-white mt-4 transition-all duration-200 hover:shadow-lg hover:shadow-sky-600/30 hover:-translate-y-0.5"
                 isLoading={isLoading}
                 disabled={isLoading}
                 leftIcon={!isLoading && <LogIn className="w-5 h-5" />}
               >
-                {isLoading ? "Se verifică..." : "Intră în cont"}
+                {isLoading ? "Se verifică..." : "Autentificare"}
               </Button>
             </form>
 
             {/* Secțiunea de Completare Rapidă (Quick Fill) */}
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider text-center mb-4">
-                Completare Rapidă Email
-              </p>
+            <div className="mt-8 pt-6 border-t border-slate-100 relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Acces Rapid
+              </span>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-3">
                 <Button 
                   type="button" 
                   variant="outline" 
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("admin")}
-                  className="flex flex-col gap-1 py-3 h-auto"
+                  className="flex flex-col gap-1.5 py-3 bg-white hover:bg-sky-50 border-slate-200 hover:border-sky-300 transition-all duration-200 group"
                 >
-                  <ShieldCheck className="w-5 h-5 text-purple-600" />
-                  <span className="text-xs">Admin</span>
+                  <ShieldCheck className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-semibold text-slate-600 group-hover:text-sky-800">Admin</span>
                 </Button>
                 
                 <Button 
@@ -5452,10 +5878,10 @@ export function Login() {
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("primarie")}
-                  className="flex flex-col gap-1 py-3 h-auto"
+                  className="flex flex-col gap-1.5 py-3 bg-white hover:bg-sky-50 border-slate-200 hover:border-sky-300 transition-all duration-200 group"
                 >
-                  <Building className="w-5 h-5 text-sky-600" />
-                  <span className="text-xs">Primărie</span>
+                  <Building className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-semibold text-slate-600 group-hover:text-sky-800">Primărie</span>
                 </Button>
 
                 <Button 
@@ -5464,10 +5890,10 @@ export function Login() {
                   size="sm"
                   disabled={isLoading}
                   onClick={() => handleQuickLogin("furnizor")}
-                  className="flex flex-col gap-1 py-3 h-auto"
+                  className="flex flex-col gap-1.5 py-3 bg-white hover:bg-sky-50 border-slate-200 hover:border-sky-300 transition-all duration-200 group"
                 >
-                  <Briefcase className="w-5 h-5 text-emerald-600" />
-                  <span className="text-xs">Furnizor</span>
+                  <Briefcase className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-semibold text-slate-600 group-hover:text-sky-800">Furnizor</span>
                 </Button>
               </div>
             </div>
