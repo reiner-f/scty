@@ -85,7 +85,7 @@
   </tr>
 </table>
 
-## 🗺️ Arhitectura Sistemului (Use Case)
+## 🗺️ Diagrama de Ansamblu (High-Level Overview) (Use Case)
 
 ```mermaid
 flowchart LR
