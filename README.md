@@ -24,17 +24,17 @@
     </td>
     <td width="50%" align="center">
       <img src="screenshots/panel1.png" alt="Dashboard 1"/>
-      <br/><b>Vedere de ansamblu (Panel 1)</b>
+      <br/><b>Utilizatori (Panel 1)</b>
     </td>
   </tr>
   <tr>
     <td align="center">
       <img src="screenshots/panel2.png" alt="Dashboard 2"/>
-      <br/><b>Gestionare Cereri (Panel 2)</b>
+      <br/><b>Primării (Panel 2)</b>
     </td>
     <td align="center">
       <img src="screenshots/panel3.png" alt="Dashboard 3"/>
-      <br/><b>Statistici (Panel 3)</b>
+      <br/><b>Furnizori (Panel 3)</b>
     </td>
   </tr>
 </table>
@@ -44,11 +44,11 @@
   <tr>
     <td width="50%" align="center">
       <img src="screenshots/chatbot_1.png" alt="Chatbot AI - Conversație"/>
-      <br/><b>Conversație AI Inteligentă</b>
+      <br/><b>Sugestii și Răspunsuri Rapide</b>
     </td>
     <td width="50%" align="center">
       <img src="screenshots/chatbot_2.png" alt="Chatbot AI - Răspunsuri Rapide"/>
-      <br/><b>Sugestii și Răspunsuri Rapide</b>
+      <br/><b>Conversație AI Inteligentă</b>
     </td>
   </tr>
 </table>
@@ -62,7 +62,7 @@
     </td>
     <td width="50%" align="center">
       <img src="screenshots/pdf_report.png" alt="Raport PDF Generat"/>
-      <br/><b>Raport PDF Formatat Profesional</b>
+      <br/><b>Raport PDF</b>
     </td>
   </tr>
 </table>
