@@ -74,7 +74,7 @@
 
 Bălan Mugurel - Software Developer
 
-* [LinkedIn](https://www.linkedin.com/in/mugurel-balan/)
+* [LinkedIn](https://www.linkedin.com/in/ionu%C8%9B-balan/)
 * [GitHub](https://github.com/reiner-f)
 
 ## 📜 Licență
