@@ -85,6 +85,61 @@
   </tr>
 </table>
 
+## Diagramă Use Case (mermaid) ##
+flowchart LR
+    %% Stiluri pentru actori
+    classDef actorStyle fill:#2A303C,stroke:#61DAFB,stroke-width:2px,color:#fff;
+    
+    %% Actorii principali
+    Admin(("Administrator")):::actorStyle
+    Primarie(("Primărie")):::actorStyle
+    Furnizor(("Furnizor")):::actorStyle
+    SistemAI(("Asistent AI (Gemini)")):::actorStyle
+
+    %% Sistemul (Aplicația Centria)
+    subgraph Centria["Centria ERP & Ticketing Platform"]
+        direction TB
+        Auth(["Autentificare securizată"])
+        
+        Creare(["Creare Cerere Intervenție"])
+        Vizualizare(["Vizualizare Dashboard (Real-time)"])
+        Update(["Actualizare Status Cerere"])
+        
+        Export(["Export Rapoarte PDF / Excel"])
+        Chat(["Comunicare Chatbot"])
+        Tichet(["Generare Tichet Suport"])
+        
+        MgmtUsers(["Management Utilizatori & Roluri"])
+        MgmtLogs(["Monitorizare Jurnal Audit / JSON"])
+    end
+
+    %% Relațiile Administratorului
+    Admin --> Auth
+    Admin --> Vizualizare
+    Admin --> Export
+    Admin --> Chat
+    Admin --> MgmtUsers
+    Admin --> MgmtLogs
+
+    %% Relațiile Primăriei
+    Primarie --> Auth
+    Primarie --> Creare
+    Primarie --> Vizualizare
+    Primarie --> Export
+    Primarie --> Chat
+    Primarie --> Tichet
+
+    %% Relațiile Furnizorului
+    Furnizor --> Auth
+    Furnizor --> Vizualizare
+    Furnizor --> Update
+    Furnizor --> Export
+    Furnizor --> Chat
+    Furnizor --> Tichet
+
+    %% Legătura cu sistemul extern (AI)
+    Chat -. "procesează întrebările" .-> SistemAI
+
 ## 🚀 Funcționalități Principale
 
 ### 🔐 Management Avansat al Accesului (RBAC)
