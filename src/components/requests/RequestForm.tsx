@@ -139,15 +139,22 @@ export function RequestForm() {
         description: formData.description,
         status: "pending",
         municipalityId: municipality.id,
-        municipality: municipality.name,
-        municipalityCui: municipality.cui,
+        municipality: {
+          name: municipality.name,
+          cui: municipality.cui,
+          locality: municipality.locality
+        },
         contactPerson: municipality.contactPerson,
         locality: municipality.locality,
         serviceId: formData.serviceId,
-        serviceName: selectedService?.name || "",
+        service: { 
+          name: selectedService?.name || "" 
+        },
         providerId: formData.providerId,
-        providerName: selectedProvider?.name || "",
-        providerCui: selectedProvider?.cui || "",
+        provider: { 
+          name: selectedProvider?.name || "", 
+          cui: selectedProvider?.cui || "" 
+        },
         estimatedStartDate: formData.hasEstimatedDate
           ? formData.estimatedStartDate
           : undefined,
