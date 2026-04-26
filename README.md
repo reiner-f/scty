@@ -142,7 +142,39 @@ flowchart LR
     %% Legătura cu sistemul extern (AI)
     Chat -. "procesează întrebările" .-> SistemAI
 ```
+### 🏛️ Fluxul de Lucru: Modul Primărie
 
+```mermaid
+flowchart LR
+    %% Stiluri pentru actori
+    classDef actorStyle fill:#2A303C,stroke:#61DAFB,stroke-width:2px,color:#fff;
+    
+    %% Actorii principali
+    Primarie(("Primărie")):::actorStyle
+    SistemAI(("Asistent AI (Gemini)")):::actorStyle
+
+    %% Sistemul (Aplicația Centria)
+    subgraph Centria["Centria ERP - Perspectiva Primăriei"]
+        direction TB
+        Auth(["Autentificare securizată"])
+        Creare(["Creare Cerere Intervenție"])
+        Vizualizare(["Vizualizare Dashboard (Real-time)"])
+        Export(["Export Rapoarte PDF / Excel"])
+        Chat(["Comunicare Chatbot"])
+        Tichet(["Generare Tichet Suport"])
+    end
+
+    %% Relațiile Primăriei
+    Primarie --> Auth
+    Primarie --> Creare
+    Primarie --> Vizualizare
+    Primarie --> Export
+    Primarie --> Chat
+    Primarie --> Tichet
+
+    %% Legătura cu sistemul extern (AI)
+    Chat -. "procesează întrebările" .-> SistemAI
+```
 ## 🚀 Funcționalități Principale
 
 ### 🔐 Management Avansat al Accesului (RBAC)
