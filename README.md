@@ -174,7 +174,7 @@ flowchart LR
 
     %% Legătura cu sistemul extern (AI)
     Chat -. "procesează întrebările" .-> SistemAI
-``
+```
 ### 🏢 Fluxul de Lucru: Modul Furnizor
 
 ```mermaid
@@ -207,7 +207,7 @@ flowchart LR
 
     %% Legătura cu sistemul extern (AI)
     Chat -. "procesează întrebările" .-> SistemAI
-````
+```
 ## 🚀 Funcționalități Principale
 
 ### 🔐 Management Avansat al Accesului (RBAC)
