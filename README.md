@@ -7,7 +7,83 @@
 ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
 **Centria** este o platformă web modernă de tip SaaS (B2G/B2B) concepută pentru a eficientiza fluxul de lucru și comunicarea dintre instituțiile publice (Primării) și entitățile private (Furnizori de servicii). Aplicația centralizează gestiunea cererilor de intervenție, oferind transparență totală, rapoarte automate și asistență bazată pe Inteligență Artificială.
+---
+## 📸 Galerie Interfață
 
+### 🔐 Autentificare & Securitate
+<div align="center">
+  <img src="screenshots/login.png" alt="Ecran Login" width="800" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"/>
+</div>
+
+### 📊 Panouri de Control (Dashboards)
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="screenshots/admin.png" alt="Panou Administrator"/>
+      <br/><b>Panou Administrator</b>
+    </td>
+    <td width="50%" align="center">
+      <img src="screenshots/panel1.png" alt="Dashboard 1"/>
+      <br/><b>Vedere de ansamblu (Panel 1)</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="screenshots/panel2.png" alt="Dashboard 2"/>
+      <br/><b>Gestionare Cereri (Panel 2)</b>
+    </td>
+    <td align="center">
+      <img src="screenshots/panel3.png" alt="Dashboard 3"/>
+      <br/><b>Statistici (Panel 3)</b>
+    </td>
+  </tr>
+</table>
+
+### 🤖 Asistent Virtual (AI Chatbot)
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="screenshots/chatbot_1.png" alt="Chatbot AI - Conversație"/>
+      <br/><b>Conversație AI Inteligentă</b>
+    </td>
+    <td width="50%" align="center">
+      <img src="screenshots/chatbot_2.png" alt="Chatbot AI - Răspunsuri Rapide"/>
+      <br/><b>Sugestii și Răspunsuri Rapide</b>
+    </td>
+  </tr>
+</table>
+
+### 📄 Export Enterprise (PDF & Excel)
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="screenshots/export_pdf_xlsx.png" alt="Meniu Export"/>
+      <br/><b>Selecție și Export Date</b>
+    </td>
+    <td width="50%" align="center">
+      <img src="screenshots/pdf_report.png" alt="Raport PDF Generat"/>
+      <br/><b>Raport PDF Formatat Profesional</b>
+    </td>
+  </tr>
+</table>
+
+### 📧 Sistem Suport & Monitorizare
+<table>
+  <tr>
+    <td width="33%" align="center">
+      <img src="screenshots/email_creating.png" alt="Trimitere Tichet"/>
+      <br/><b>Creare Tichet Suport</b>
+    </td>
+    <td width="33%" align="center">
+      <img src="screenshots/email_received.png" alt="Tichet Primit"/>
+      <br/><b>Email Primit în Inbox</b>
+    </td>
+    <td width="33%" align="center">
+      <img src="screenshots/notif_json.png" alt="Sistem Notificări JSON"/>
+      <br/><b>Istoric Activitate (JSON Logs)</b>
+    </td>
+  </tr>
+</table>
 ---
 
 ## 🚀 Funcționalități Principale
