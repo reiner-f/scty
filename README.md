@@ -174,7 +174,40 @@ flowchart LR
 
     %% Legătura cu sistemul extern (AI)
     Chat -. "procesează întrebările" .-> SistemAI
-```
+``
+### 🏢 Fluxul de Lucru: Modul Furnizor
+
+```mermaid
+flowchart LR
+    %% Stiluri pentru actori
+    classDef actorStyle fill:#2A303C,stroke:#61DAFB,stroke-width:2px,color:#fff;
+    
+    %% Actorii principali
+    Furnizor(("Furnizor")):::actorStyle
+    SistemAI(("Asistent AI (Gemini)")):::actorStyle
+
+    %% Sistemul (Aplicația Centria)
+    subgraph Centria["Centria ERP - Perspectiva Furnizorului"]
+        direction TB
+        Auth(["Autentificare securizată"])
+        Vizualizare(["Vizualizare Dashboard (Real-time)"])
+        Update(["Actualizare Status Cerere"])
+        Export(["Export Rapoarte PDF / Excel"])
+        Chat(["Comunicare Chatbot"])
+        Tichet(["Generare Tichet Suport"])
+    end
+
+    %% Relațiile Furnizorului
+    Furnizor --> Auth
+    Furnizor --> Vizualizare
+    Furnizor --> Update
+    Furnizor --> Export
+    Furnizor --> Chat
+    Furnizor --> Tichet
+
+    %% Legătura cu sistemul extern (AI)
+    Chat -. "procesează întrebările" .-> SistemAI
+````
 ## 🚀 Funcționalități Principale
 
 ### 🔐 Management Avansat al Accesului (RBAC)
