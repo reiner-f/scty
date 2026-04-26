@@ -1,0 +1,95 @@
+# Centria ERP & Ticketing Platform
+
+![Status Proiect](https://img.shields.io/badge/Status-Finalizat-emerald?style=for-the-badge)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+
+**Centria** este o platformă web modernă de tip SaaS (B2G/B2B) concepută pentru a eficientiza fluxul de lucru și comunicarea dintre instituțiile publice (Primării) și entitățile private (Furnizori de servicii). Aplicația centralizează gestiunea cererilor de intervenție, oferind transparență totală, rapoarte automate și asistență bazată pe Inteligență Artificială.
+
+---
+
+## 🚀 Funcționalități Principale
+
+### 🔐 Management Avansat al Accesului (RBAC)
+* **3 Roluri Distincte:** Administrator, Primărie și Furnizor.
+* **Securitate la nivel de rând (RLS):** Politici stricte în baza de date (PostgreSQL) care garantează că fiecare utilizator vede doar datele la care are dreptul legal.
+
+### ⚡ Actualizări în Timp Real (Real-time)
+* Integrare cu **Supabase Realtime** pentru sincronizarea instantanee a statusurilor cererilor. Orice modificare făcută de un furnizor este vizibilă instantaneu în dashboard-ul primăriei, fără reîncărcarea paginii.
+
+### 🤖 Asistent Virtual Inteligent (Hybrid AI)
+* Chatbot integrat cu **Gemini AI** prin Supabase Edge Functions.
+* **Context-Aware:** Asistentul utilizează un "System Prompt" dinamic care restrânge informațiile oferite în funcție de rolul și permisiunile utilizatorului autentificat.
+* Logică hibridă pentru optimizarea costurilor și viteză de răspuns.
+
+### 📄 Module de Export Enterprise
+* **Export PDF Profesional:** Generat pe client cu suport complet pentru diacritice (fonturi Roboto preîncărcate), logo custom și formatare tabelară.
+* **Export Excel:** Generare de fișiere `.xlsx` formatate pentru analiză de date folosind librăria `XLSX`.
+* **Selecție Manuală:** Posibilitatea de a exporta doar cererile selectate individual prin checkbox-uri.
+
+### 🎨 UI/UX și Performanță
+* **Interfață Adaptivă:** Design complet responsive realizat cu Tailwind CSS.
+* **Visual FX:** Fundal animat complex generat prin API-ul HTML5 Canvas (rețea de noduri interconectate).
+* **Dark Mode:** Suport nativ pentru modul întunecat/luminos cu persistență locală.
+* **Animații:** Tranziții fluide între pagini și modale folosind Framer Motion.
+
+---
+
+## 🛠️ Stack Tehnologic
+
+* **Frontend:** React 18, TypeScript, Vite.
+* **Backend & Auth:** Supabase (PostgreSQL).
+* **Stilizare:** Tailwind CSS, Lucide React (iconițe).
+* **AI:** Google Gemini API.
+* **Librării Export:** jsPDF, jspdf-autotable, XLSX.
+* **Monitorizare:** Plugin custom Vite pentru salvarea logurilor de activitate în format JSON (local).
+
+---
+
+## 📦 Instalare și Configurare
+
+1. **Clonare Repository:**
+   ```bash
+   git clone [https://github.com/reiner-f/scty.git](https://github.com/reiner-f/scty.git)
+   cd scty
+2. **Instalare Dependențe:**
+    ```bash
+    npm install
+3. **Configurare Variabile de Mediu:**
+    Creați un fișier .env în rădăcina proiectului și adăugați cheile necesare:
+    ```bash
+    VITE_SUPABASE_URL=your_supabase_url
+    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+    VITE_WEB3FORMS_ACCESS_KEY=your_web3forms_key
+4. **Rulare în Mod Dezvoltare:**
+    ```bash
+    npm run dev
+
+### 🛡️ Securitate și Audit ##
+**Activity Logging:** Orice acțiune critică (creare cerere, modificare status) este interceptată de un plugin middleware personalizat și salvată într-un jurnal de audit local.
+**Environment Safety:** Cheile sensibile sunt gestionate prin variabile de mediu, nefiind expuse în codul sursă urcat pe GitHub *(via .gitignore)*.
+## 👨‍💻 Autor
+
+Bălan Mugurel - Software Developer
+
+* [LinkedIn](https://www.linkedin.com/in/mugurel-balan/)
+* [GitHub](https://github.com/reiner-f)
+
+## 📜 Licență
+
+Acest proiect este dezvoltat în scop academic pentru cursul „Dezvoltarea Aplicațiilor Web”. Toate drepturile rezervate autorului.
+## 📂 Structura Proiectului ##
+
+```text
+src/
+├── components/      # Componente reutilizabile (UI, Modale, Dashboards)
+├── context/         # Managementul stării globale (AppContext)
+├── hooks/           # Hook-uri personalizate (useLocalStorage, etc.)
+├── lib/             # Configurări biblioteci externe (Supabase)
+├── pages/           # Paginile principale (History, Dashboard, Login)
+├── services/        # Logica de business (API calls, Exporturi, AI)
+├── types/           # Definiții TypeScript (Interfețe, Enum-uri)
+└── utils/           # Funcții ajutătoare (formatare date, helper-i CSS) 
+
