@@ -290,6 +290,57 @@ flowchart LR
     SupabasePlatform:::supabase
     GoogleCloud:::external
 ```
+## 🤖 Integrare AI: Flux de Comunicare (Sequence Diagram)
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    %% Definire participanți cu culori/iconițe (dacă e suportat de tema vizuală)
+    participant U as 👤 Utilizator
+    participant F as 💻 React Frontend (Vite)
+    participant S as 🛡️ Supabase Auth
+    participant EF as ⚡ Edge Function (Deno)
+    participant G as 🧠 Google Gemini AI
+
+    Note over U, F: Utilizatorul scrie un mesaj în Chat
+    U->>F: Introduce întrebare
+
+    F->>F: Activează stare "Loading" (Skeleton UI)
+    
+    F->>S: Verifică sesiune activă (JWT)
+    S-->>F: Token valid / nevalid
+    
+    alt Token nevalid
+        F->>U: Redirecționare spre Login / Eroare 401
+    else Token valid
+        F->>EF: Cerere POST /chat (Prompt + JWT)
+        
+        Note over EF: Verificare Permisiuni & Rate Limiting
+        
+        EF->>EF: Curățare & Formatare Prompt (Context System)
+        
+        EF->>G: Cerere HTTPS (API Key securizată)
+        
+        alt Gemini Răspunde cu succes
+            G-->>EF: 200 OK (Răspuns generat)
+            EF-->>F: JSON (Mesaj AI)
+            F->>F: Dezactivează stare "Loading"
+            F->>U: Afișează răspunsul cu animație
+        else Eroare Gemini / Timeout
+            G-->>EF: 500 Error / Rate Limit
+            EF-->>F: Eroare (Fallback message)
+            F->>U: Afișează: "Asistentul este temporar indisponibil"
+        end
+    end
+
+    opt Logare Activitate
+        EF->>EF: Salvează metadate în DB (Audit Log)
+    end
+```
+Blocul alt (Alternativă): Gestionează ramificările. Arată că aplicația știe să trateze situația în care token-ul este expirat sau AI-ul dă eroare.
+Blocul opt (Opțional): Sugerează că sistemul poate face și operațiuni de fundal, precum salvarea log-urilor pentru Analytics.
+Securitate: Am evidențiat faptul că API Key-ul Gemini stă doar în Edge Function (securizat), nu ajunge niciodată în browserul utilizatorului.
+
 ## 🚀 Funcționalități Principale
 
 ### 🔐 Management Avansat al Accesului (RBAC)
