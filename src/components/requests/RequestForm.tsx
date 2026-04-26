@@ -139,7 +139,7 @@ export function RequestForm() {
         description: formData.description,
         status: "pending",
         municipalityId: municipality.id,
-        municipalityName: municipality.name,
+        municipality: municipality.name,
         municipalityCui: municipality.cui,
         contactPerson: municipality.contactPerson,
         locality: municipality.locality,
