@@ -337,9 +337,9 @@ sequenceDiagram
         EF->>EF: Salvează metadate în DB (Audit Log)
     end
 ```
-Blocul alt (Alternativă): Gestionează ramificările. Arată că aplicația știe să trateze situația în care token-ul este expirat sau AI-ul dă eroare.
-Blocul opt (Opțional): Sugerează că sistemul poate face și operațiuni de fundal, precum salvarea log-urilor pentru Analytics.
-Securitate: Am evidențiat faptul că API Key-ul Gemini stă doar în Edge Function (securizat), nu ajunge niciodată în browserul utilizatorului.
+**Blocul alt (Alternativă): Gestionează ramificările. Arată că aplicația știe să trateze situația în care token-ul este expirat sau AI-ul dă eroare.**
+**Blocul opt (Opțional): Sugerează că sistemul poate face și operațiuni de fundal, precum salvarea log-urilor pentru Analytics.**
+**Securitate: Am evidențiat faptul că API Key-ul Gemini stă doar în Edge Function (securizat), nu ajunge niciodată în browserul utilizatorului.**
 
 ## 🚀 Funcționalități Principale
 
