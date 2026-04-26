@@ -208,6 +208,39 @@ flowchart LR
     %% Legătura cu sistemul extern (AI)
     Chat -. "procesează întrebările" .-> SistemAI
 ```
+### 🛡️ Fluxul de Lucru: Modul Administrator
+
+```mermaid
+flowchart LR
+    %% Stiluri pentru actori
+    classDef actorStyle fill:#2A303C,stroke:#61DAFB,stroke-width:2px,color:#fff;
+    
+    %% Actorii principali
+    Admin(("Administrator")):::actorStyle
+    SistemAI(("Asistent AI (Gemini)")):::actorStyle
+
+    %% Sistemul (Aplicația Centria)
+    subgraph Centria["Centria ERP - Perspectiva Administratorului"]
+        direction TB
+        Auth(["Autentificare securizată"])
+        Vizualizare(["Vizualizare Dashboard Global (Real-time)"])
+        MgmtUsers(["Management Utilizatori & Roluri"])
+        MgmtLogs(["Monitorizare Jurnal Audit / JSON"])
+        Export(["Export Rapoarte PDF / Excel"])
+        Chat(["Comunicare Chatbot"])
+    end
+
+    %% Relațiile Administratorului
+    Admin --> Auth
+    Admin --> Vizualizare
+    Admin --> MgmtUsers
+    Admin --> MgmtLogs
+    Admin --> Export
+    Admin --> Chat
+
+    %% Legătura cu sistemul extern (AI)
+    Chat -. "procesează întrebările" .-> SistemAI
+```
 ## 🚀 Funcționalități Principale
 
 ### 🔐 Management Avansat al Accesului (RBAC)
