@@ -84,7 +84,6 @@
     </td>
   </tr>
 </table>
----
 
 ## 🚀 Funcționalități Principale
 
