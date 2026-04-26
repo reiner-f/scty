@@ -85,7 +85,9 @@
   </tr>
 </table>
 
-## Diagramă Use Case (mermaid) ##
+## 🗺️ Arhitectura Sistemului (Use Case)
+
+```mermaid
 flowchart LR
     %% Stiluri pentru actori
     classDef actorStyle fill:#2A303C,stroke:#61DAFB,stroke-width:2px,color:#fff;
@@ -139,6 +141,7 @@ flowchart LR
 
     %% Legătura cu sistemul extern (AI)
     Chat -. "procesează întrebările" .-> SistemAI
+```
 
 ## 🚀 Funcționalități Principale
 
