@@ -241,6 +241,55 @@ flowchart LR
     %% Legătura cu sistemul extern (AI)
     Chat -. "procesează întrebările" .-> SistemAI
 ```
+### 🧠 Integrare API Supabase & Google Gemini (Edge Functions)
+
+```mermaid
+flowchart LR
+    %% Definire stiluri vizuale
+    classDef frontend fill:#3b82f6,stroke:#1e3a8a,stroke-width:2px,color:#fff;
+    classDef supabase fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef external fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
+
+    %% Aplicația Client
+    subgraph Frontend["Frontend (Vite + React)"]
+        direction TB
+        UI(["Interfață Utilizator"])
+        SupabaseClient(["Supabase JS Client"])
+        
+        UI <--> SupabaseClient
+    end
+
+    %% Backend-ul Supabase
+    subgraph SupabasePlatform["Supabase Platform (BaaS)"]
+        direction TB
+        Auth[("Supabase Auth\n(Generare & Validare JWT)")]
+        DB[("Bază de Date PostgreSQL\n(Reguli RLS active)")]
+        EdgeFunc[["Edge Function: Chatbot\n(Deno Runtime)"]]
+    end
+
+    %% Servicii Externe
+    subgraph GoogleCloud["Servicii Externe"]
+        direction TB
+        GeminiAPI{{"Google Gemini API"}}
+    end
+
+    %% Fluxul de Autentificare si Baza de date
+    SupabaseClient -- "1. Login / Preia Token JWT" --> Auth
+    SupabaseClient -- "2. Operațiuni CRUD (PostgREST)" --> DB
+    Auth -. "Securizează accesul" .-> DB
+
+    %% Fluxul pentru Chatbot / Edge Function
+    SupabaseClient -- "3. Invoke Function (Prompt utilizator)" --> EdgeFunc
+    Auth -. "Validează Token JWT" .-> EdgeFunc
+    EdgeFunc -- "4. Trimite cerere securizată HTTP REST" --> GeminiAPI
+    GeminiAPI -- "5. Returnează răspunsul generat" --> EdgeFunc
+    EdgeFunc -. "6. Salvează log-uri (Opțional)" .-> DB
+    
+    %% Aplicare stiluri
+    Frontend:::frontend
+    SupabasePlatform:::supabase
+    GoogleCloud:::external
+```
 ## 🚀 Funcționalități Principale
 
 ### 🔐 Management Avansat al Accesului (RBAC)
