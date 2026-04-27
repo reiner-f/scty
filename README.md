@@ -423,4 +423,43 @@ src/
 ├── services/        # Logica de business (API calls, Exporturi, AI)
 ├── types/           # Definiții TypeScript (Interfețe, Enum-uri)
 └── utils/           # Funcții ajutătoare (formatare date, helper-i CSS) 
+## 🧪 Calitatea Codului & Testare (Unit Testing)
 
+Pentru a asigura integritatea datelor și a proceselor de business (ex: formatarea rapoartelor, logica de statusuri), am implementat o suită de teste unitare folosind **Vitest**.
+
+### 🛠️ Tehnologii folosite:
+* **Vitest**: Framework de testare integrat nativ cu Vite pentru execuție ultra-rapidă.
+* **Date-fns**: Validarea formatării datelor conform cerințelor administrative.
+
+### 📋 Unități Testate:
+1. **Formatare Dată (`formatDate`)**: Verifică transformarea corectă a timestamp-urilor ISO în formatul românesc (`d MMM yyyy`).
+2. **Business Logic (`getStatusLabel`)**: Garantează maparea corectă a statusurilor tehnice (`pending`, `accepted`, `rejected`) în etichete lizibile pentru utilizatori.
+3. **Utilitare UI (`classNames`)**: Testează concatenarea dinamică a claselor Tailwind CSS (ignoring falsy values).
+4. **Generator ID-uri (`generateId`)**: Asigură unicitatea identificatorilor folosiți în notificări și log-uri.
+
+### 🚀 Execuția Testelor
+Pentru a rula testele local, folosește comanda:
+```bash
+npm test
+```
+
+### Arhitectura Fluxului de Testare:
+```mermaid
+graph LR
+    subgraph "Sursă Date"
+    A[src/utils/helpers.ts]
+    end
+
+    subgraph "Mediul de Testare"
+    B{Vitest Runner}
+    C[helpers.test.ts]
+    end
+
+    subgraph "Rezultat"
+    D[✅ 4 PASSED]
+    end
+
+    A --> B
+    C --> B
+    B --> D
+```
