@@ -426,41 +426,42 @@ src/
 ```
 ## 🧪 Calitatea Codului & Testare (Unit Testing)
 
-Pentru a asigura integritatea datelor și a proceselor de business (ex: formatarea rapoartelor, logica de statusuri), am implementat o suită de teste unitare folosind **Vitest**.
+Pentru a asigura integritatea datelor și a proceselor de business complexe (ex: generarea rapoartelor, calculul statisticilor și securitatea ID-urilor), am implementat o suită extinsă de teste unitare folosind **Vitest**.
 
 ### 🛠️ Tehnologii folosite:
-* **Vitest**: Framework de testare integrat nativ cu Vite pentru execuție ultra-rapidă.
-* **Date-fns**: Validarea formatării datelor conform cerințelor administrative.
+* **Vitest**: Framework de testare de ultimă generație, integrat nativ cu Vite pentru o viteză de execuție superioară.
+* **Date-fns**: Validarea și formatarea riguroasă a datelor calendaristice conform standardelor administrative românești.
 
-### 📋 Unități Testate:
-1. **Formatare Dată (`formatDate`)**: Verifică transformarea corectă a timestamp-urilor ISO în formatul românesc (`d MMM yyyy`).
-2. **Business Logic (`getStatusLabel`)**: Garantează maparea corectă a statusurilor tehnice (`pending`, `accepted`, `rejected`) în etichete lizibile pentru utilizatori.
-3. **Utilitare UI (`classNames`)**: Testează concatenarea dinamică a claselor Tailwind CSS (ignoring falsy values).
-4. **Generator ID-uri (`generateId`)**: Asigură unicitatea identificatorilor folosiți în notificări și log-uri.
+### 📋 Unități Testate (Sistem de Robusteză):
+1. **Formatare Dată (`formatDate`)**: Verifică transformarea timestamp-urilor ISO în formatul `d MMM yyyy` și gestionează automat erorile pentru input-uri invalide (Edge Case Handling).
+2. **Business Logic (`getStatusLabel`)**: Garantează maparea corectă și securizată a statusurilor tehnice (`pending`, `accepted`, `rejected`) în etichete oficiale în limba română.
+3. **Utilitare UI (`classNames`)**: Testează logica condițională complexă pentru concatenarea claselor Tailwind CSS, asigurând un UI curat prin eliminarea valorilor de tip `null`, `undefined` sau `false`.
+4. **Integritate Identificatori (`generateId`)**: Un test de coliziune verifică generarea a 100 de ID-uri simultane pentru a garanta unicitatea absolută a notificărilor și log-urilor în sistem.
+5. **Motor de Filtrare & Căutare**: Simulează filtrarea multi-criteriu după titlu și furnizor, asigurând că utilizatorii primesc doar datele la care au dreptul de acces.
+6. **Calcul Statistici**: Verifică acuratețea algoritmilor care generează procentele și numerele totale afișate în Dashboard-ul administrativ.
 
 ### 🚀 Execuția Testelor
-Pentru a rula testele local, folosește comanda:
+Testele rulează în mod asincron și pot fi lansate local cu o singură comandă:
 ```bash
 npm test
 ```
 
 ### Arhitectura Fluxului de Testare:
 ```mermaid
-graph LR
-    subgraph "Sursă Date"
-    A[src/utils/helpers.ts]
+graph TD
+    subgraph "Nivel de Dezvoltare"
+        A[Modificare Logica Business] --> B{Vitest Watch Mode}
     end
 
-    subgraph "Mediul de Testare"
-    B{Vitest Runner}
-    C[helpers.test.ts]
+    subgraph "Suita de Validare"
+        B --> C[Teste Robusteză Data/ID]
+        B --> D[Validare Mapare Status]
+        B --> E[Test Filtrare & Căutare]
+        B --> F[Verificare Calcul Stats]
     end
 
-    subgraph "Rezultat"
-    D[✅ 4 PASSED]
+    subgraph "Deployment"
+        C & D & E & F --> G{Validare Totală?}
+        G -->|DA| H[✅ Gata pentru Vercel Production]
+        G -->|NU| I[❌ Blocare Build & Debug]
     end
-
-    A --> B
-    C --> B
-    B --> D
-```
