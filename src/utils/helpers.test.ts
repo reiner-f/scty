@@ -10,29 +10,28 @@ describe('🚀 Suite Testare Avansată - Centria ERP', () => {
 
   describe('Grup 1: Utilitare & Robusteză', () => {
     it('formatDate: ar trebui să gestioneze date valide și invalide', () => {
-      // Caz normal
+      // Caz normal: Verificăm formatul stabilit în helpers.ts
       expect(formatDate('2026-04-27T10:00:00Z')).toBe('27 apr 2026');
       
-      // Caz limită: input invalid (funcția ar trebui să returneze string-ul original conform implementării)
+      // Caz limită: input invalid (returnează string-ul original)
       const invalidDate = 'not-a-date';
       expect(formatDate(invalidDate)).toBe(invalidDate);
     });
 
     it('generateId: ar trebui să garanteze unicitatea la execuție rapidă', () => {
       const ids = new Set(Array.from({ length: 100 }, () => generateId('notif')));
-      // Un Set elimină duplicatele; dacă lungimea rămâne 100, toate ID-urile sunt unice
+      // Un Set elimină duplicatele; dacă mărimea rămâne 100, toate sunt unice
       expect(ids.size).toBe(100);
-      expect([...ids][0]).toMatch(/^notif-\d+-/); // Verifică formatul prefix-timestamp
+      expect([...ids][0]).toMatch(/^notif-\d+-/); 
     });
 
     it('classNames: ar trebui să proceseze corect logică condițională complexă', () => {
+      // REPARAT: Am eliminat 'null' pentru a respecta tipurile 'string | boolean | undefined'
       const result = classNames(
         'base-class',
         undefined,
-        null,
         false && 'dont-show',
         true && 'show-me',
-        0 && 'zero-is-falsy',
         'p-4'
       );
       expect(result).toBe('base-class show-me p-4');
