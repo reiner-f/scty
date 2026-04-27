@@ -423,6 +423,7 @@ src/
 ├── services/        # Logica de business (API calls, Exporturi, AI)
 ├── types/           # Definiții TypeScript (Interfețe, Enum-uri)
 └── utils/           # Funcții ajutătoare (formatare date, helper-i CSS) 
+```
 ## 🧪 Calitatea Codului & Testare (Unit Testing)
 
 Pentru a asigura integritatea datelor și a proceselor de business (ex: formatarea rapoartelor, logica de statusuri), am implementat o suită de teste unitare folosind **Vitest**.
