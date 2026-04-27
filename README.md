@@ -8,6 +8,8 @@
 
 **Centria** este o platformă web modernă de tip SaaS (B2G/B2B) concepută pentru a eficientiza fluxul de lucru și comunicarea dintre instituțiile publice (Primării) și entitățile private (Furnizori de servicii). Aplicația centralizează gestiunea cererilor de intervenție, oferind transparență totală, rapoarte automate și asistență bazată pe Inteligență Artificială.
 ---
+### 🎥 Demonstrație Video
+[Video de prezentare](./demo/centria_app.mp4)
 ## 📸 Galerie Interfață
 
 ### 🔐 Autentificare & Securitate
